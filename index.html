@@ -109,6 +109,38 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .snack{position:fixed;left:8px;right:8px;bottom:calc(60px + env(safe-area-inset-bottom));z-index:16;background:#2a2f3a;color:var(--fg);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;direction:rtl;font-size:14px;line-height:1.4;box-shadow:0 8px 24px #0008}
 .snack span{flex:1;min-width:0}
 .snack button{font:inherit;font-weight:800;border:0;background:var(--acc);color:#111;border-radius:8px;padding:6px 12px;flex:0 0 auto}
+
+.w.has-fx{box-shadow:inset 0 -2px 0 #7ecbff}
+.fx-badge{font-size:11px;line-height:1;margin:0 1px;align-self:flex-start;padding-top:2px}
+.sheet-bg{position:fixed;inset:0;background:#0008;z-index:25}
+.sheet{position:fixed;left:0;right:0;bottom:calc(52px + env(safe-area-inset-bottom));z-index:26;background:var(--card);border-radius:16px 16px 0 0;padding:12px 12px 14px;direction:rtl;max-height:min(62vh,440px);overflow:auto;box-shadow:0 -8px 32px #000a;font-family:'Assistant',sans-serif}
+.sheet h3{margin:0 0 8px;font-size:16px}
+.sheet .srow{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.sheet input[type=text]{flex:1;min-width:0;font:inherit;font-size:17px;background:#12151b;border:1px solid #3a4150;border-radius:8px;color:var(--fg);padding:7px 10px}
+.sheet input.warn{box-shadow:inset 0 0 0 1px #ff9f43}
+.sheet .slabel{font-size:12px;color:var(--mut);margin:0 0 4px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
+.chip{font:inherit;font-size:12px;background:#20242d;border:1px solid #3a4150;border-radius:16px;color:var(--fg);padding:5px 8px;display:inline-flex;align-items:center;gap:3px;line-height:1.2}
+.chip.on{background:var(--acc);color:#111;border-color:var(--acc);font-weight:800}
+.sheet .sactions{display:flex;gap:8px;justify-content:flex-start}
+.sheet .sactions .ok{background:var(--acc);color:#111;font:inherit;font-weight:800;border:0;border-radius:8px;padding:8px 14px}
+.sheet .sactions .cancel{background:#262b35;color:var(--fg);font:inherit;border:0;border-radius:8px;padding:8px 14px}
+.tok .fx{display:inline-block}
+.tok .fx-shake{animation:fx-shake .32s ease-in-out infinite}
+@keyframes fx-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px) rotate(-2deg)}75%{transform:translateX(2px) rotate(2deg)}}
+.tok .fx-whisper{opacity:.55;transform:scale(.82);transform-origin:center}
+.tok .fx-pop{animation:fx-pop .5s ease-out}
+@keyframes fx-pop{0%{transform:scale(.7);opacity:.6}45%{transform:scale(1.55);opacity:1}100%{transform:scale(1)}}
+.tok .fx-strike{text-decoration:line-through;text-decoration-thickness:2px}
+.tok .fx-repl{margin-inline-start:.35em;text-decoration:none;opacity:.95}
+.tok .fx-morph .from{animation:fx-morph-out .45s ease-in forwards}
+.tok .fx-morph .to{animation:fx-morph-in .45s ease-out forwards;margin-inline-start:.15em}
+@keyframes fx-morph-out{to{opacity:.35;transform:scale(.92)}}
+@keyframes fx-morph-in{from{opacity:0;transform:scale(1.15)}to{opacity:1;transform:scale(1)}}
+.tok .hid{opacity:.4}
+.tok .hid-hi{opacity:1;color:#7ecbff}
+.tok.on .hid-hi{color:#9ad8ff}
+
 </style>
 </head>
 <body>
@@ -120,7 +152,7 @@ video{width:100%;height:100%;display:block;object-fit:contain}
   <button class="hbtn" id="export">ייצוא JSON</button>
   <button class="hbtn submit" id="submit">הגש</button>
 </header>
-<div class="help">לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה עורכת · <b>B</b> סימון הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · כל שינוי נשמר</div>
+<div class="help">לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה עורכת טקסט ואפקט · <b>B</b> סימון הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · כל שינוי נשמר</div>
 <div id="lines"></div>
 <div class="vwrap" id="vwrap"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
 <div class="player" id="player">
@@ -142,9 +174,9 @@ const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'applicatio
 const RATES=[1,1.5,2,2.5];
 const $=id=>document.getElementById(id);
 const v=$('v'),linesEl=$('lines'),statusEl=$('status');
-let words=[],breaks=new Set(),bold=new Set(),notes={},wordCuts=[],cutBreaks=new Set(),silences=new Set(),wordEdits={};
+let words=[],breaks=new Set(),bold=new Set(),notes={},wordCuts=[],cutBreaks=new Set(),silences=new Set(),wordEdits={},effects={};
 let undoStack=[],saveTimer=null,saving=false,queued=false;
-let dirtyFlags={layout:false,notes:false,cuts:false,silences:false,edits:false};
+let dirtyFlags={layout:false,notes:false,cuts:false,silences:false,edits:false,effects:false};
 let nowId=null,nowOff=0,unitEls={},partEls={},unitsCache=[],linesCache=[];
 let songTitle='',performerName='',waNumber='';
 let cutMode=false,playOnTap=true,snackTimer=null,lpTimer=null,lpOpened=false,lpStart=null,suppressSeek=false;
@@ -156,8 +188,23 @@ function hasOwn(o,k){return Object.prototype.hasOwnProperty.call(o,k)}
 function cloneNotes(n){try{return JSON.parse(JSON.stringify(n||{}))}catch(e){return {}}}
 function parseId(val){return (val!=null && /^-?\d+$/.test(String(val)))?+val:val}
 function sortMixed(arr){return [...arr].sort((a,b)=>{const ap=String(a).split(/[.:]/).map(Number),bp=String(b).split(/[.:]/).map(Number);for(let i=0;i<Math.max(ap.length,bp.length);i++){const d=(ap[i]||0)-(bp[i]||0);if(d)return d}return 0})}
-function emptyFlags(){return {layout:false,notes:false,cuts:false,silences:false,edits:false}}
-function anyDirty(f){return !!(f.layout||f.notes||f.cuts||f.silences||f.edits)}
+const FLAG_KEYS=['layout','notes','cuts','silences','edits','effects'];
+function emptyFlags(){const o={};FLAG_KEYS.forEach(k=>o[k]=false);return o}
+function anyDirty(f){return FLAG_KEYS.some(k=>f[k])}
+function restoreFlags(flags){FLAG_KEYS.forEach(k=>{if(flags[k])dirtyFlags[k]=true})}
+function cloneObj(n){try{return JSON.parse(JSON.stringify(n||{}))}catch(e){return {}}}
+const FX=[
+  {type:'none',icon:'○',label:'ללא',need:false,field:''},
+  {type:'hidden',icon:'🔍',label:'מילה חבויה',need:'letters',field:'אילו אותיות'},
+  {type:'morph',icon:'🔄',label:'מילה מתחלפת',need:'required',field:'משתנה ל…'},
+  {type:'strike',icon:'✂️',label:'מחיקה',need:'optional',field:'מוחלף ב…'},
+  {type:'shake',icon:'〰️',label:'רעד',need:false,field:''},
+  {type:'typewriter',icon:'⌨️',label:'הקלדה',need:false,field:''},
+  {type:'whisper',icon:'🤫',label:'לחישה',need:false,field:''},
+  {type:'pop',icon:'💥',label:'פיצוץ',need:false,field:''}
+];
+function fxMeta(type){return FX.find(x=>x.type===type)||FX[0]}
+function effectOf(u){if(!u)return null;return effects[String(u.id)]||effects[String(u.orig)]||null}
 
 function editString(i){const k=String(i);return hasOwn(wordEdits,k)?wordEdits[k]:(words[i]?words[i].w:'')}
 function tokensOf(i){
@@ -272,13 +319,14 @@ async function load(){
     cutBreaks=new Set(Array.isArray(st.cutBreaks)?st.cutBreaks:[]);
     silences=new Set(Array.isArray(st.silences)?st.silences:[]);
     wordEdits=(st.wordEdits&&typeof st.wordEdits==='object'&&!Array.isArray(st.wordEdits))?{...st.wordEdits}:{};
+    effects=(st.effects&&typeof st.effects==='object'&&!Array.isArray(st.effects))?cloneObj(st.effects):{};
     if(words.length)breaks.add(lastWordIdx());
     v.src=data.video_url||'';
     render();setStatus('נשמר ✓');layoutChrome();
   }catch(e){setStatus('שגיאה בטעינה',true);linesEl.innerHTML='<div class="err-box">לא הצלחתי לטעון. נסה לרענן.</div>'}
 }
 
-function snapshot(){undoStack.push({b:[...breaks],o:[...bold],n:cloneNotes(notes),c:[...wordCuts],cb:[...cutBreaks],s:[...silences],e:{...wordEdits}});if(undoStack.length>200)undoStack.shift()}
+function snapshot(){undoStack.push({b:[...breaks],o:[...bold],n:cloneNotes(notes),c:[...wordCuts],cb:[...cutBreaks],s:[...silences],e:{...wordEdits},f:cloneObj(effects)});if(undoStack.length>200)undoStack.shift()}
 function change(fn,kind){snapshot();fn();if(kind)dirtyFlags[kind]=true;render(true);queueSave()}
 
 function hideSnack(){clearTimeout(snackTimer);snackTimer=null;const s=$('snack');if(s)s.remove()}
@@ -311,7 +359,31 @@ function noteTitle(note){
   return 'הערה: '+(note.text||'ידני');
 }
 function closeNoteMenu(){const m=$('nmenu');if(m)m.remove()}
-function closeWordEdit(){const m=$('wedit');if(m){m.remove();render(true)}}
+function closeWordEdit(){const m=$('wsheet');if(m)m.remove();const bg=$('wsheet-bg');if(bg)bg.remove()}
+function esc(s){return String(s||'').replace(/[<>&]/g,'')}
+function highlightLetters(text, which){
+  const chars=[...text], marks=new Array(chars.length).fill(false);
+  const w=(which||'').trim();
+  if(w){
+    const range=/^(\d+)\s*-\s*(\d+)$/.exec(w);
+    const list=/^[\d,\s]+$/.test(w);
+    if(range){const a=Math.max(1,+range[1]),b=Math.min(chars.length,+range[2]);for(let i=a;i<=b;i++)marks[i-1]=true}
+    else if(list){w.split(/[\s,]+/).filter(Boolean).forEach(n=>{const i=+n-1;if(i>=0&&i<chars.length)marks[i]=true})}
+    else{
+      const needle=[...w];
+      for(let i=0;i<=chars.length-needle.length;i++){
+        if(chars.slice(i,i+needle.length).join('')===w){for(let j=0;j<needle.length;j++)marks[i+j]=true}
+      }
+    }
+  }
+  return chars.map((ch,i)=>'<span class="'+(marks[i]?'hid-hi':'hid')+'">'+esc(ch)+'</span>').join('');
+}
+function typewriterHtml(text,u,t,on){
+  if(!on)return esc(text);
+  const chars=[...text], dur=Math.max(0.05,(u.e-u.s)||0.3);
+  const n=Math.max(0,Math.min(chars.length, Math.ceil(((t-u.s)/dur)*chars.length)));
+  return esc(chars.slice(0,n).join(''));
+}
 function openNoteMenu(btn,key){
   closeNoteMenu();
   const menu=document.createElement('div');menu.className='nmenu';menu.id='nmenu';
@@ -340,27 +412,61 @@ function openNoteMenu(btn,key){
 }
 function openWordEdit(unit){
   closeNoteMenu();closeWordEdit();
-  const el=unitEls[unit.id];if(!el)return;
-  const box=document.createElement('span');box.className='wedit';box.id='wedit';
-  const inp=document.createElement('input');inp.type='text';inp.dir='rtl';inp.value=editString(unit.orig);
-  inp.setAttribute('aria-label','עריכת מילה');
-  const syncWarn=()=>{const empty=inp.value==='';inp.classList.toggle('warn',empty);inp.title=empty?'טקסט ריק יסתיר את המילה':'עריכת מילה'};
+  const key=String(unit.orig);
+  const cur=effects[key]||{type:'none',text2:''};
+  let chosen=cur.type||'none';
+  const bg=document.createElement('div');bg.className='sheet-bg';bg.id='wsheet-bg';
+  const sheet=document.createElement('div');sheet.className='sheet';sheet.id='wsheet';sheet.setAttribute('role','dialog');sheet.setAttribute('aria-label','עריכת מילה ואפקט');
+  const h=document.createElement('h3');h.textContent='עריכת מילה';
+  const row=document.createElement('div');row.className='srow';
+  const inp=document.createElement('input');inp.type='text';inp.dir='rtl';inp.value=editString(unit.orig);inp.setAttribute('aria-label','טקסט המילה');
+  const syncWarn=()=>{const empty=inp.value==='';inp.classList.toggle('warn',empty);inp.title=empty?'טקסט ריק יסתיר את המילה':'טקסט המילה'};
   syncWarn();inp.addEventListener('input',syncWarn);
+  row.appendChild(inp);
+  const chips=document.createElement('div');chips.className='chips';
+  const fieldWrap=document.createElement('div');
+  const fieldLab=document.createElement('div');fieldLab.className='slabel';
+  const inp2=document.createElement('input');inp2.type='text';inp2.dir='rtl';inp2.value=cur.text2||'';
+  function syncField(){
+    const meta=fxMeta(chosen);
+    fieldWrap.style.display=meta.need?'block':'none';
+    fieldLab.textContent=meta.field||'';
+    inp2.setAttribute('aria-label',meta.field||'');
+    inp2.placeholder=meta.field||'';
+    inp2.required=meta.need==='required';
+  }
+  FX.forEach(fx=>{
+    const c=document.createElement('button');c.type='button';c.className='chip'+(fx.type===chosen?' on':'');
+    c.textContent=fx.icon+' '+fx.label;c.title=fx.label;c.setAttribute('aria-label',fx.label);c.dataset.type=fx.type;
+    c.onclick=e=>{e.stopPropagation();chosen=fx.type;chips.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x.dataset.type===chosen));syncField();if(metaNeeds(fx))setTimeout(()=>inp2.focus(),0)};
+    chips.appendChild(c);
+  });
+  function metaNeeds(fx){return !!(fx&&fx.need)}
+  fieldWrap.append(fieldLab,inp2);syncField();
+  const actions=document.createElement('div');actions.className='sactions';
   const save=()=>{
     const val=inp.value, orig=words[unit.orig]?words[unit.orig].w:'';
+    const text2=inp2.value;
+    closeWordEdit();
     change(()=>{
-      const k=String(unit.orig);
+      const k=key;
       if(val===orig)delete wordEdits[k];else wordEdits[k]=val;
       const n=(!hasOwn(wordEdits,k)||val===orig)?1:tokensOf(unit.orig).length;
       pruneSubKeys(unit.orig,n<=1?1:n);
-      dirtyFlags.layout=true;dirtyFlags.cuts=true;dirtyFlags.silences=true;
+      if(!chosen||chosen==='none')delete effects[k];
+      else{const ev={type:chosen};if((fxMeta(chosen).need)&&text2)ev.text2=text2;else if(text2)ev.text2=text2;effects[k]=ev}
+      dirtyFlags.layout=true;dirtyFlags.cuts=true;dirtyFlags.silences=true;dirtyFlags.effects=true;
     },'edits');
   };
-  const ok=document.createElement('button');ok.className='we-ok';ok.textContent='✓';ok.title='שמירה';ok.setAttribute('aria-label','שמירה');ok.onclick=e=>{e.stopPropagation();save()};
-  const cancel=document.createElement('button');cancel.className='we-x';cancel.textContent='✕';cancel.title='ביטול';cancel.setAttribute('aria-label','ביטול');cancel.onclick=e=>{e.stopPropagation();closeWordEdit()};
+  const ok=document.createElement('button');ok.className='ok';ok.textContent='שמירה';ok.onclick=e=>{e.stopPropagation();save()};
+  const cancel=document.createElement('button');cancel.className='cancel';cancel.textContent='ביטול';cancel.onclick=e=>{e.stopPropagation();closeWordEdit()};
+  actions.append(ok,cancel);
+  sheet.append(h,row,chips,fieldWrap,actions);
+  bg.addEventListener('click',()=>closeWordEdit());
+  sheet.addEventListener('click',e=>e.stopPropagation());
   inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save()}if(e.key==='Escape'){e.preventDefault();closeWordEdit()}};
-  box.append(inp,ok,cancel);
-  el.replaceWith(box);
+  inp2.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save()}if(e.key==='Escape'){e.preventDefault();closeWordEdit()}};
+  document.body.append(bg,sheet);
   setTimeout(()=>{inp.focus();inp.select()},0);
 }
 
@@ -395,13 +501,18 @@ function appendPart(w,u,pt){
 function makeWordShell(u){
   const w=document.createElement('span');
   const hasCuts=cutsFor(u).length>0;
-  w.className='w'+(isBold(u)?' marked':'')+(hasCuts?' cutword':'')+(u.edited?' edited':'')+(u.hidden?' hidden-w':'');
+  const fx=effectOf(u);
+  w.className='w'+(isBold(u)?' marked':'')+(hasCuts?' cutword':'')+(u.edited?' edited':'')+(u.hidden?' hidden-w':'')+(fx&&fx.type&&fx.type!=='none'?' has-fx fx-'+fx.type:'');
   w.dataset.id=String(u.id);
   if(u.hidden){
     const g=document.createElement('button');g.className='ghost';g.textContent='—';
     g.dataset.act='seek';g.dataset.id=String(u.id);g.dataset.off='0';
     g.title='מילה מוסתרת — לחץ לחיצה ארוכה לעריכה';g.setAttribute('aria-label','מילה מוסתרת — לחץ לחיצה ארוכה לעריכה');
     w.appendChild(g);partEls[u.id+':0']=g;
+  }
+  if(fx&&fx.type&&fx.type!=='none'){
+    const badge=document.createElement('span');badge.className='fx-badge';const meta=fxMeta(fx.type);
+    badge.textContent=meta.icon;badge.title=meta.label;w.appendChild(badge);
   }
   const bb=document.createElement('button');bb.className='bb';bb.textContent='B';bb.dataset.act='bold';bb.dataset.id=String(u.id);bb.title='הדגשה';bb.setAttribute('aria-label','הדגשה');
   w._bb=bb;
@@ -516,12 +627,13 @@ linesEl.addEventListener('pointerup',clearLp);
 linesEl.addEventListener('pointercancel',clearLp);
 linesEl.addEventListener('contextmenu',e=>{if(e.target.closest('[data-act="seek"]'))e.preventDefault()});
 document.addEventListener('click',e=>{if(!e.target.closest('.nmenu,.nbtn'))closeNoteMenu()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('wsheet')){e.preventDefault();closeWordEdit()}});
 
 $('cutmode').onclick=()=>{cutMode=!cutMode;$('cutmode').setAttribute('aria-pressed',cutMode?'true':'false');document.body.classList.toggle('cutmode',cutMode);render(true)};
 $('undo').onclick=()=>{
   hideSnack();const s=undoStack.pop();if(!s)return;
-  breaks=new Set(s.b);bold=new Set(s.o);notes=cloneNotes(s.n);wordCuts=[...s.c];cutBreaks=new Set(s.cb);silences=new Set(s.s);wordEdits={...s.e};
-  dirtyFlags={layout:true,notes:true,cuts:true,silences:true,edits:true};render(true);queueSave();
+  breaks=new Set(s.b);bold=new Set(s.o);notes=cloneNotes(s.n);wordCuts=[...s.c];cutBreaks=new Set(s.cb);silences=new Set(s.s);wordEdits={...s.e};effects=cloneObj(s.f);
+  dirtyFlags={layout:true,notes:true,cuts:true,silences:true,edits:true,effects:true};render(true);queueSave();
 };
 
 function exportState(){
@@ -531,6 +643,7 @@ function exportState(){
   if(cutBreaks.size)o.cutBreaks=sortMixed(cutBreaks);
   if(silences.size)o.silences=sortMixed(silences);
   if(Object.keys(wordEdits).length)o.wordEdits={...wordEdits};
+  if(Object.keys(effects).length)o.effects=cloneObj(effects);
   return o;
 }
 function queueSave(){queued=true;setStatus('שומר…');clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
@@ -558,23 +671,25 @@ async function save(){
     }
     if(flags.silences){if(silences.size)merged.silences=sortMixed(silences);else delete merged.silences}
     if(flags.edits){if(Object.keys(wordEdits).length)merged.wordEdits={...wordEdits};else delete merged.wordEdits}
+    if(flags.effects){if(Object.keys(effects).length)merged.effects=cloneObj(effects);else delete merged.effects}
     const body=JSON.stringify({state:merged,updated_at:new Date().toISOString()});
     try{localStorage.setItem('subs-'+PROJECT,body)}catch(e){}
     const url=`${SB_URL}/rest/v1/subtitle_projects?id=eq.${encodeURIComponent(PROJECT)}`+(row.updated_at?`&updated_at=eq.${encodeURIComponent(row.updated_at)}`:'');
     const r=await fetch(url,{method:'PATCH',headers:{...H,Prefer:'return=representation'},body});
     if(!r.ok)throw new Error(r.status);
     const out=await r.json();
-    if(!out.length){['layout','notes','cuts','silences','edits'].forEach(k=>{if(flags[k])dirtyFlags[k]=true});saving=false;return save()}
+    if(!out.length){restoreFlags(flags);saving=false;return save()}
     let needRender=false;
     if(!flags.layout && !dirtyFlags.layout){if(Array.isArray(server.breaks))breaks=new Set(server.breaks);if(Array.isArray(server.bold))bold=new Set(server.bold);if(words.length)breaks.add(lastWordIdx());needRender=true}
     if(!flags.notes && !dirtyFlags.notes){notes=(server.notes&&typeof server.notes==='object'&&!Array.isArray(server.notes))?cloneNotes(server.notes):{};needRender=true}
     if(!flags.cuts && !dirtyFlags.cuts){wordCuts=Array.isArray(server.wordCuts)?[...server.wordCuts]:(Array.isArray(server.cuts)?[...server.cuts]:[]);cutBreaks=new Set(Array.isArray(server.cutBreaks)?server.cutBreaks:[]);needRender=true}
     if(!flags.silences && !dirtyFlags.silences){silences=new Set(Array.isArray(server.silences)?server.silences:[]);needRender=true}
     if(!flags.edits && !dirtyFlags.edits){wordEdits=(server.wordEdits&&typeof server.wordEdits==='object'&&!Array.isArray(server.wordEdits))?{...server.wordEdits}:{};needRender=true}
+    if(!flags.effects && !dirtyFlags.effects){effects=(server.effects&&typeof server.effects==='object'&&!Array.isArray(server.effects))?cloneObj(server.effects):{};needRender=true}
     if(needRender && !anyDirty(dirtyFlags))render(true);
     if(!queued && !anyDirty(dirtyFlags))setStatus('נשמר ✓');
   }catch(e){
-    ['layout','notes','cuts','silences','edits'].forEach(k=>{if(flags[k])dirtyFlags[k]=true});
+    restoreFlags(flags);
     setStatus('שגיאה בשמירה, מנסה שוב…',true);queued=true;saveTimer=setTimeout(save,3000);
   }
   saving=false;
@@ -698,8 +813,19 @@ function renderSub(u,pt,t){
     const sameWord=i>0&&ln.items[i-1].u.id===it.u.id;
     if(html && !sameWord)html+=' ';
     const on=u&&it.u.id===u.id && pt && it.pt.off===pt.off;
-    const txt=it.pt.text.replace(/[<>&]/g,'');
-    html+='<span class="tok'+(on?' on':'')+(on&&isBold(it.u)?' b':'')+'">'+txt+'</span>';
+    const fx=effectOf(it.u);
+    const typ=fx&&fx.type&&fx.type!=='none'?fx.type:'';
+    let inner=esc(it.pt.text);
+    if(typ==='hidden') inner=highlightLetters(it.pt.text, fx.text2||'');
+    else if(typ==='typewriter') inner=typewriterHtml(it.pt.text,it.u,t,on);
+    else if(typ==='morph' && fx.text2){
+      if(on) inner='<span class="from">'+esc(it.pt.text)+'</span><span class="to">'+esc(fx.text2)+'</span>';
+      else inner=esc(it.pt.text);
+    }else if(typ==='strike'){
+      inner=esc(it.pt.text)+(fx.text2?'<span class="fx-repl">'+esc(fx.text2)+'</span>':'');
+    }
+    const fxCls=typ?' fx fx-'+typ:'';
+    html+='<span class="tok'+(on?' on':'')+(on&&isBold(it.u)?' b':'')+'"><span class="'+(fxCls||'fx')+'">'+inner+'</span></span>';
   });
   sub.innerHTML=html;
 }
