@@ -39,6 +39,7 @@ header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow
 .wt,.part-btn,.ch{font:inherit;font-size:21px;color:var(--fg);background:none;border:0;padding:4px 3px;border-radius:6px;line-height:1.25;display:inline-block;font-weight:400;transform-origin:center center;transition:transform .16s ease}
 .w.now .wt,.part.now .part-btn,.part.now .ch{transform:scale(1.1);background:var(--acc2);color:#fff}
 .w.now.marked .wt,.part.now.marked .part-btn,.part.now.marked .ch{transform:scale(1.25);font-weight:800}
+.w.sung.marked .wt,.part.sung.marked .part-btn,.part.sung.marked .ch{font-weight:800}
 .w.edited{box-shadow:inset 0 -2px 0 rgba(255,204,51,.7)}
 .w.hidden-w{opacity:.55}
 .w.hidden-w .ghost{font:inherit;font-size:14px;color:var(--mut);padding:4px 6px;background:none;border:0}
@@ -94,6 +95,7 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .vwrap.big .sub{font-size:20px}
 .sub .tok{display:inline-block;transform-origin:center center;transition:transform .16s ease;font-weight:400}
 .sub .tok.on{color:var(--acc);transform:scale(1.1)}
+.sub .tok.b{font-weight:800}
 .sub .tok.on.b{font-weight:800;transform:scale(1.25)}
 .vbig{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:14px;padding:0}
 .err-box{padding:30px;text-align:center;color:#ff8a8a;font-size:18px}
@@ -767,6 +769,20 @@ let seeking=false;
 $('seek').addEventListener('input',()=>{seeking=true;if(v.duration)v.currentTime=$('seek').value/1000*v.duration});
 $('seek').addEventListener('change',()=>{seeking=false});
 
+function updateSung(t){
+  for(const u of unitsCache){
+    const marked=isBold(u);
+    const pts=partTimes(u);
+    let any=false;
+    pts.forEach(pt=>{
+      const started=marked && t+0.02>=pt.s;
+      if(started)any=true;
+      const pe=partEls[u.id+':'+pt.off];
+      if(pe){const part=pe.classList&&pe.classList.contains('part')?pe:(pe.closest?pe.closest('.part')||pe:pe);if(part&&part.classList)part.classList.toggle('sung',started)}
+    });
+    const we=unitEls[u.id];if(we)we.classList.toggle('sung',any);
+  }
+}
 function findAt(t){
   const units=unitsCache;if(!units.length)return {u:null,pt:null};
   let u=null;
@@ -790,6 +806,7 @@ function tick(force){
       const pe=partEls[u.id+':'+off];if(pe){const part=pe.classList&&pe.classList.contains('part')?pe:(pe.closest?pe.closest('.part')||pe:pe);part.classList.add('now')}
       if(follow&&!v.paused&&we){const r=we.getBoundingClientRect(),bottom=window.innerHeight-$('player').offsetHeight;if(r.top<60||r.bottom>bottom-10)we.scrollIntoView({block:'center',behavior:'smooth'})}
     }
+    updateSung(t);
     renderSub(u,pt,t);
   }
 }
@@ -821,7 +838,8 @@ function renderSub(u,pt,t){
       inner=esc(it.pt.text)+(fx.text2?'<span class="fx-repl">'+esc(fx.text2)+'</span>':'');
     }
     const fxCls=typ?' fx fx-'+typ:'';
-    html+='<span class="tok'+(on?' on':'')+(on&&isBold(it.u)?' b':'')+'"><span class="'+(fxCls||'fx')+'">'+inner+'</span></span>';
+    const started=t+0.02>=it.pt.s;
+    html+='<span class="tok'+(on?' on':'')+(isBold(it.u)&&started?' b':'')+'"><span class="'+(fxCls||'fx')+'">'+inner+'</span></span>';
   });
   sub.innerHTML=html;
 }
