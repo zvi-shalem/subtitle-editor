@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0f1115;--card:#181b22;--fg:#f2f2f2;--mut:#8b93a3;--acc:#ffcc33;--acc2:#4fa3ff;--bar:#12151b;--header-h:52px;--vthumb-w:80px;--early:#ff9f43;--late:#4fa3ff}
+:root{--bg:#0f1115;--card:#181b22;--fg:#f2f2f2;--mut:#8b93a3;--acc:#ffcc33;--acc2:#4fa3ff;--bar:#12151b;--header-h:52px;--early:#ff9f43;--late:#4fa3ff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'Assistant',sans-serif}
 header{position:sticky;top:0;z-index:20;background:var(--bar);border-bottom:1px solid #262b35;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -32,7 +32,6 @@ header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow
 .help{font-size:13px;color:var(--mut);padding:6px 14px 0;line-height:1.45}
 .help b{color:var(--fg)}
 #lines{padding:8px 8px 90px}
-body.vid-on #lines{padding-left:calc(12px + var(--vthumb-w) + 8px)}
 .line{display:flex;flex-wrap:wrap;align-items:center;gap:0;background:var(--card);border-radius:10px;padding:5px 6px 5px 4px;margin:6px 0 0;position:relative;cursor:pointer}
 .line.cur{outline:2px solid var(--acc2)}
 .num{font-size:11px;color:var(--mut);min-width:22px;text-align:center;align-self:flex-start;padding-top:8px}
@@ -472,9 +471,6 @@ function openWordEdit(unit){
 
 function layoutChrome(){
   const h=$('hdr');if(h)document.documentElement.style.setProperty('--header-h',h.offsetHeight+'px');
-  const vw=$('vwrap');
-  if(vw.classList.contains('show')){document.body.classList.add('vid-on');document.documentElement.style.setProperty('--vthumb-w',vw.offsetWidth+'px')}
-  else document.body.classList.remove('vid-on');
 }
 
 function appendCutLine(w,u,off,broke){
