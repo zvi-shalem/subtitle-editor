@@ -3,27 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="icon" href="data:,">
+<meta name="theme-color" content="#12151b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="כתוביות">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
 <title>עורך כתוביות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0f1115;--card:#181b22;--fg:#f2f2f2;--mut:#8b93a3;--acc:#ffcc33;--acc2:#4fa3ff;--bar:#12151b}
+:root{--bg:#0f1115;--card:#181b22;--fg:#f2f2f2;--mut:#8b93a3;--acc:#ffcc33;--acc2:#4fa3ff;--bar:#12151b;--header-h:52px;--vthumb-w:80px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'Assistant',sans-serif}
-header{position:sticky;top:0;z-index:5;background:var(--bar);border-bottom:1px solid #262b35;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+header{position:sticky;top:0;z-index:20;background:var(--bar);border-bottom:1px solid #262b35;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .status{font-size:13px;color:var(--mut)}
 .status.err{color:#ff6b6b}
 .hbtn{font:inherit;font-size:14px;background:#262b35;color:var(--fg);border:0;border-radius:8px;padding:6px 10px}
+.hbtn.submit{background:var(--acc);color:#111;font-weight:800;font-size:16px;padding:8px 18px}
 .help{font-size:14px;color:var(--mut);padding:8px 14px 0;line-height:1.5}
 .help b{color:var(--fg)}
 #lines{padding:8px 8px 90px}
-.line{display:flex;flex-wrap:wrap;align-items:center;gap:0;background:var(--card);border-radius:10px;padding:6px 6px 6px 4px;margin:6px 0;position:relative}
+body.vid-on #lines{padding-left:calc(12px + var(--vthumb-w) + 8px)}
+.line{display:flex;flex-wrap:wrap;align-items:center;gap:0;background:var(--card);border-radius:10px;padding:6px 6px 6px 4px;margin:6px 0;position:relative;cursor:pointer}
 .line.cur{outline:2px solid var(--acc2)}
 .num{font-size:11px;color:var(--mut);min-width:26px;text-align:center;align-self:flex-start;padding-top:8px}
-.w{display:inline-flex;align-items:flex-start;}
+.w{display:inline-flex;align-items:flex-start}
 .wt{font:inherit;font-size:21px;color:var(--fg);background:none;border:0;padding:4px 3px;border-radius:6px;line-height:1.25}
 .w.bold .wt{font-weight:800;color:var(--acc)}
 .w.now .wt{background:var(--acc2);color:#fff}
@@ -31,18 +42,19 @@ header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow
 .w.bold .bb{background:var(--acc);color:#111;border-color:var(--acc)}
 .gap{font:inherit;min-width:38px;height:38px;margin:0 6px;padding:0 6px;border:1.5px solid #3d7fd6;background:#16294a;color:#9cc8ff;font-size:18px;font-weight:800;border-radius:19px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 .gap:active,.gap:hover{background:var(--acc2);color:#fff;border-color:var(--acc2)}
-.x{font:inherit;margin-inline-start:auto;min-width:44px;height:38px;border-radius:19px;border:1.5px solid #e05555;background:#4a1a1f;color:#ffb3b3;font-size:20px;font-weight:800;line-height:1;padding:0 10px;display:inline-flex;align-items:center;justify-content:center}
+.x{font:inherit;min-width:36px;height:36px;margin:0 4px 0 2px;border-radius:18px;border:1.5px solid #e05555;background:#4a1a1f;color:#ffb3b3;font-size:20px;font-weight:800;line-height:1;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;align-self:center}
 .x:active{background:#e05555;color:#fff}
-
-.player{position:fixed;bottom:0;left:0;right:0;z-index:10;background:var(--bar);border-top:1px solid #262b35;padding:0 8px env(safe-area-inset-bottom);height:calc(52px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:6px;direction:ltr}
+.player{position:fixed;bottom:0;left:0;right:0;z-index:15;background:var(--bar);border-top:1px solid #262b35;padding:0 8px env(safe-area-inset-bottom);height:calc(52px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:6px;direction:ltr}
 .ib{font:inherit;flex:0 0 auto;width:38px;height:38px;border:0;border-radius:50%;background:#262b35;color:var(--fg);font-size:13px;font-weight:700;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .ib.main{background:var(--acc2);width:42px;height:42px;font-size:17px}
 .ib.on{background:var(--acc);color:#111}
 .time{flex:0 0 auto;font-size:12px;color:var(--mut);direction:ltr;min-width:66px;text-align:center}
 input[type=range]{flex:1;min-width:40px;direction:ltr;accent-color:var(--acc2);height:4px;margin:0}
-.vwrap{position:fixed;left:8px;bottom:calc(60px + env(safe-area-inset-bottom));z-index:11;height:200px;aspect-ratio:480/854;background:#000;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px #000a;display:none}
+.speed{font:inherit;flex:0 0 auto;height:28px;min-width:40px;padding:0 9px;border:0;border-radius:14px;background:#262b35;color:var(--fg);font-size:13px;font-weight:800;line-height:28px}
+.speed:not([data-rate="1"]){background:var(--acc);color:#111}
+.vwrap{position:fixed;left:8px;top:calc(var(--header-h) + 8px);z-index:10;height:132px;aspect-ratio:480/854;background:#000;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px #000a;display:none}
 .vwrap.show{display:block}
-.vwrap.big{height:min(60vh,520px)}
+.vwrap.big{height:min(50vh,420px)}
 video{width:100%;height:100%;display:block;object-fit:contain}
 .sub{position:absolute;left:2px;right:2px;bottom:10%;text-align:center;font-size:12px;font-weight:600;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;direction:rtl;line-height:1.2}
 .vwrap.big .sub{font-size:20px}
@@ -50,7 +62,6 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .sub .on{color:var(--acc)}
 .vbig{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:14px;padding:0}
 .err-box{padding:30px;text-align:center;color:#ff8a8a;font-size:18px}
-.hbtn.submit{background:var(--acc);color:#111;font-weight:800;font-size:16px;padding:8px 18px}
 .modal-bg{position:fixed;inset:0;background:#000a;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal{background:var(--card);border-radius:14px;padding:18px 16px;max-width:420px;width:100%;direction:rtl;font-family:'Assistant',sans-serif;box-shadow:0 8px 32px #000a}
 .modal h2{margin:0 0 8px;font-size:20px}
@@ -59,17 +70,20 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .modal .actions{display:flex;gap:8px;justify-content:flex-start}
 .modal .ok{background:var(--acc);color:#111;font:inherit;font-weight:800;border:0;border-radius:8px;padding:10px 16px}
 .modal .cancel{background:#262b35;color:var(--fg);font:inherit;border:0;border-radius:8px;padding:10px 16px}
+.snack{position:fixed;left:8px;right:8px;bottom:calc(60px + env(safe-area-inset-bottom));z-index:16;background:#2a2f3a;color:var(--fg);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;direction:rtl;font-size:14px;line-height:1.4;box-shadow:0 8px 24px #0008}
+.snack span{flex:1;min-width:0}
+.snack button{font:inherit;font-weight:800;border:0;background:var(--acc);color:#111;border-radius:8px;padding:6px 12px;flex:0 0 auto}
 </style>
 </head>
 <body>
-<header>
+<header id="hdr">
   <h1 id="title">עורך כתוביות</h1>
   <span id="status" class="status">טוען…</span>
   <button class="hbtn" id="undo" title="ביטול פעולה אחרונה">↶ בטל</button>
   <button class="hbtn" id="export">ייצוא JSON</button>
   <button class="hbtn submit" id="submit">הגש</button>
 </header>
-<div class="help">לחיצה על <b>מילה</b> מנגנת מאותו רגע · <b>B</b> מדגיש מילה · <b>↵</b> בין מילים מפצל לשורה חדשה · <b>×</b> בסוף שורה מחבר אותה לשורה הבאה · כל שינוי נשמר אוטומטית</div>
+<div class="help">לחיצה על <b>מילה</b> או על <b>שורה</b> מעבירה לאותו רגע · <b>B</b> מדגיש מילה · <b>↵</b> מפצל לשורה חדשה · <b>×</b> מימין מחבר לשורה הבאה · כל שינוי נשמר אוטומטית</div>
 <div id="lines"></div>
 <div class="vwrap" id="vwrap"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
 <div class="player" id="player">
@@ -78,6 +92,8 @@ video{width:100%;height:100%;display:block;object-fit:contain}
   <button class="ib" id="fwd" aria-label="5 שניות קדימה">+5</button>
   <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="התקדמות">
   <span class="time" id="time">0:00 / 0:00</span>
+  <button class="speed" id="speed" data-rate="1" aria-label="מהירות ניגון 1×" title="מהירות ניגון">1×</button>
+  <button class="ib on" id="tapmode" aria-label="לחיצה מנגנת" title="לחיצה מנגנת" aria-pressed="true">▶</button>
   <button class="ib" id="size" aria-label="הצגת וידאו" title="הצג / הסתר וידאו">🎬</button>
   <button class="ib on" id="follow" aria-label="גלילה עם השיר" title="גלילה עם השיר">⇣</button>
 </div>
@@ -86,13 +102,23 @@ const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6ZmpkZHp2bnh1YnRtaWhieW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NzY4NjYsImV4cCI6MjEwNzA1Mjg2Nn0.mfGd4WLNiNh-mhpgCX2MjmzxOQIfWESS8CUGjYbB8FQ';
 const PROJECT=new URLSearchParams(location.search).get('project')||'amitai-part';
 const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+const RATES=[1,1.5,2,2.5];
 const $=id=>document.getElementById(id);
 const v=$('v'),linesEl=$('lines'),statusEl=$('status');
-let words=[],breaks=new Set(),bold=new Set(),undoStack=[],saveTimer=null,saving=false,dirty=false,nowIdx=-1,wordEls=[];
+let words=[],breaks=new Set(),bold=new Set(),undoStack=[],saveTimer=null,saving=false,dirty=false,queued=false,nowIdx=-1,wordEls=[];
 let songTitle='',performerName='',waNumber='';
+let playOnTap=true,snackTimer=null;
 
 function setStatus(t,err){statusEl.textContent=t;statusEl.classList.toggle('err',!!err)}
 function fmt(t){if(!isFinite(t))t=0;const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+String(s).padStart(2,'0')}
+function lastWordIdx(){return Math.max(0,words.length-1)}
+
+function layoutChrome(){
+  const h=$('hdr');if(h)document.documentElement.style.setProperty('--header-h',h.offsetHeight+'px');
+  const vw=$('vwrap');
+  if(vw.classList.contains('show')){document.body.classList.add('vid-on');document.documentElement.style.setProperty('--vthumb-w',vw.offsetWidth+'px')}
+  else document.body.classList.remove('vid-on');
+}
 
 async function load(){
   try{
@@ -100,23 +126,35 @@ async function load(){
     if(!r.ok)throw new Error(r.status);
     const rows=await r.json();
     if(!rows.length){linesEl.innerHTML='<div class="err-box">הפרויקט "'+PROJECT.replace(/[<>&"]/g,'')+'" לא נמצא</div>';setStatus('לא נמצא',true);return}
-    const row=rows[0];
-    words=row.data.words||[];
-    songTitle=row.data.song_title||row.data.title||'';
-    performerName=row.data.performer_name||'';
-    waNumber=row.data.whatsapp_number||'';
-    document.title=(row.data.title||'')+' · עורך כתוביות';
-    $('title').textContent=row.data.title||'עורך כתוביות';
-    const st=row.state||{};
+    const row=rows[0], data=row.data||{}, st=row.state||{};
+    words=data.words||[];
+    songTitle=data.song_title||data.title||'';
+    performerName=data.performer_name||'';
+    waNumber=data.whatsapp_number||'';
+    document.title=(songTitle||data.title||'')+' · עורך כתוביות';
+    $('title').textContent=songTitle||data.title||'עורך כתוביות';
     breaks=new Set(st.breaks||[]);bold=new Set(st.bold||[]);
-    breaks.add(words.length-1);
-    v.src=row.data.video_url;
-    render();setStatus('נשמר ✓');
+    if(words.length)breaks.add(lastWordIdx());
+    v.src=data.video_url||'';
+    render();setStatus('נשמר ✓');layoutChrome();
   }catch(e){setStatus('שגיאה בטעינה',true);linesEl.innerHTML='<div class="err-box">לא הצלחתי לטעון. נסה לרענן.</div>'}
 }
 
 function snapshot(){undoStack.push({b:[...breaks],o:[...bold]});if(undoStack.length>200)undoStack.shift()}
 function change(fn){snapshot();fn();render(true);queueSave()}
+
+function hideSnack(){clearTimeout(snackTimer);snackTimer=null;const s=$('snack');if(s)s.remove()}
+function showMergeSnack(i){
+  hideSnack();
+  const upper=words[i]?words[i].w:'', lower=words[i+1]?words[i+1].w:'';
+  const bar=document.createElement('div');bar.className='snack';bar.id='snack';bar.setAttribute('role','status');
+  const msg=document.createElement('span');
+  msg.textContent='מחקת את האנטר בין "'+upper+'" ל-"'+lower+'"';
+  const btn=document.createElement('button');btn.textContent='ביטול';btn.setAttribute('aria-label','ביטול מחיקת האנטר');
+  btn.onclick=()=>{hideSnack();if(!breaks.has(i))change(()=>breaks.add(i))};
+  bar.append(msg,btn);document.body.appendChild(bar);
+  snackTimer=setTimeout(hideSnack,5000);
+}
 
 function render(keep){
   const y=window.scrollY;
@@ -131,7 +169,10 @@ function render(keep){
     const b=document.createElement('button');b.className='bb';b.textContent='B';b.dataset.act='bold';b.dataset.i=i;b.title='הדגשה';
     w.appendChild(t);w.appendChild(b);line.appendChild(w);wordEls[i]=w;
     if(breaks.has(i)){
-      if(i<words.length-1){const x=document.createElement('button');x.className='x';x.textContent='×';x.dataset.act='merge';x.dataset.i=i;x.title='חיבור לשורה הבאה';line.appendChild(x)}
+      if(i<words.length-1){
+        const x=document.createElement('button');x.className='x';x.textContent='×';x.dataset.act='merge';x.dataset.i=i;x.title='חיבור לשורה הבאה';x.setAttribute('aria-label','חיבור לשורה הבאה');
+        line.insertBefore(x,line.children[1]||null);
+      }
       line=null;
     }else{
       const g=document.createElement('button');g.className='gap';g.textContent='↵';g.dataset.act='split';g.dataset.i=i;g.title='פיצול כאן';line.appendChild(g);
@@ -139,33 +180,60 @@ function render(keep){
   }
   linesEl.appendChild(frag);
   if(keep)window.scrollTo(0,y);
-  nowIdx=-1;tick(true);
+  nowIdx=-1;tick(true);layoutChrome();
 }
+
+function seekTo(t){v.currentTime=Math.max(0,t);if(playOnTap)v.play().catch(()=>{})}
 
 linesEl.addEventListener('click',e=>{
-  const el=e.target.closest('button[data-act]');if(!el)return;
-  const i=+el.dataset.i,a=el.dataset.act;
-  if(a==='seek'){v.currentTime=Math.max(0,words[i].s-0.05);v.play().catch(()=>{});}
-  else if(a==='bold')change(()=>bold.has(i)?bold.delete(i):bold.add(i));
-  else if(a==='split')change(()=>breaks.add(i));
-  else if(a==='merge')change(()=>breaks.delete(i));
+  const el=e.target.closest('button[data-act]');
+  if(el){
+    const i=+el.dataset.i,a=el.dataset.act;
+    if(a==='seek')seekTo(Math.max(0,words[i].s-0.05));
+    else if(a==='bold')change(()=>bold.has(i)?bold.delete(i):bold.add(i));
+    else if(a==='split')change(()=>breaks.add(i));
+    else if(a==='merge'){change(()=>breaks.delete(i));showMergeSnack(i)}
+    return;
+  }
+  const line=e.target.closest('.line');if(!line)return;
+  const i=+line.dataset.first;if(words[i])seekTo(Math.max(0,words[i].s-0.05));
 });
-$('undo').onclick=()=>{const s=undoStack.pop();if(!s)return;breaks=new Set(s.b);bold=new Set(s.o);render(true);queueSave()};
+$('undo').onclick=()=>{hideSnack();const s=undoStack.pop();if(!s)return;breaks=new Set(s.b);bold=new Set(s.o);render(true);queueSave()};
 
-function stateObj(){return{breaks:[...breaks].sort((a,b)=>a-b),bold:[...bold].sort((a,b)=>a-b)}}
-function queueSave(){dirty=true;setStatus('שומר…');clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
+function stateObj(){
+  const o={breaks:[...breaks].sort((a,b)=>a-b),bold:[...bold].sort((a,b)=>a-b)};
+  return o;
+}
+function queueSave(){dirty=true;queued=true;setStatus('שומר…');clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
+async function fetchRow(){
+  const r=await fetch(`${SB_URL}/rest/v1/subtitle_projects?id=eq.${encodeURIComponent(PROJECT)}&select=state,updated_at`,{headers:H});
+  if(!r.ok)throw new Error(r.status);
+  const rows=await r.json();if(!rows.length)throw new Error('missing');
+  return rows[0];
+}
 async function save(){
   if(saving){saveTimer=setTimeout(save,300);return}
-  saving=true;dirty=false;const body=JSON.stringify({state:stateObj(),updated_at:new Date().toISOString()});
-  try{localStorage.setItem('subs-'+PROJECT,body)}catch(e){}
+  if(!dirty){queued=false;return}
+  saving=true;queued=false;const localDirty=dirty;dirty=false;
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/subtitle_projects?id=eq.${encodeURIComponent(PROJECT)}`,{method:'PATCH',headers:{...H,Prefer:'return=minimal'},body});
+    const row=await fetchRow();
+    const server=(row.state&&typeof row.state==='object')?{...row.state}:{};
+    const merged={...server,breaks:stateObj().breaks,bold:stateObj().bold};
+    const body=JSON.stringify({state:merged,updated_at:new Date().toISOString()});
+    try{localStorage.setItem('subs-'+PROJECT,body)}catch(e){}
+    const url=`${SB_URL}/rest/v1/subtitle_projects?id=eq.${encodeURIComponent(PROJECT)}`+(row.updated_at?`&updated_at=eq.${encodeURIComponent(row.updated_at)}`:'');
+    const r=await fetch(url,{method:'PATCH',headers:{...H,Prefer:'return=representation'},body});
     if(!r.ok)throw new Error(r.status);
-    if(!dirty)setStatus('נשמר ✓');
-  }catch(e){setStatus('שגיאה בשמירה, מנסה שוב…',true);dirty=true;saveTimer=setTimeout(save,3000)}
+    const out=await r.json();
+    if(!out.length){dirty=true;saving=false;return save()}
+    if(!queued&&!dirty)setStatus('נשמר ✓');
+  }catch(e){
+    dirty=true;queued=true;setStatus('שגיאה בשמירה, מנסה שוב…',true);saveTimer=setTimeout(save,3000);
+  }
   saving=false;
+  if(queued||dirty)saveTimer=setTimeout(save,300);
 }
-window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',e=>{if(dirty||queued){e.preventDefault();e.returnValue=''}});
 
 $('export').onclick=()=>{
   const st=stateObj();const cues=[];let cur=[];
@@ -174,9 +242,7 @@ $('export').onclick=()=>{
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=PROJECT+'-subtitles.json';document.body.appendChild(a);a.click();a.remove();
 };
 
-function submitMessage(){
-  return 'היי, סיימתי לערוך את הכתוביות של השיר '+songTitle+' של '+performerName+', תוכל לשלוח לי סרטון בבקשה? (פרויקט: '+PROJECT+')';
-}
+function submitMessage(){return 'היי, סיימתי לערוך את הכתוביות של השיר '+songTitle+' של '+performerName+', תוכל לשלוח לי סרטון בבקשה? (פרויקט: '+PROJECT+')'}
 function submitUrl(){
   const digits=String(waNumber||'').replace(/[^\d]/g,'');
   const base=digits?'https://wa.me/'+digits:'https://wa.me/';
@@ -194,23 +260,45 @@ $('submit').onclick=()=>{
   const ok=document.createElement('button');ok.className='ok';ok.textContent='פתח WhatsApp';
   const cancel=document.createElement('button');cancel.className='cancel';cancel.textContent='ביטול';
   cancel.onclick=closeModal;
-  bg.addEventListener('click',e=>{if(e.target===bg)closeModal()});
+  bg.addEventListener('click',ev=>{if(ev.target===bg)closeModal()});
   ok.onclick=()=>{
     const a=document.createElement('a');a.href=submitUrl();a.target='_blank';a.rel='noopener';
     document.body.appendChild(a);a.click();a.remove();
-    closeModal();
-    setStatus('נפתח WhatsApp לשליחה');
+    closeModal();setStatus('נפתח WhatsApp לשליחה');
   };
-  actions.append(ok,cancel);
-  box.append(h,p,pre,actions);bg.appendChild(box);document.body.appendChild(bg);
+  actions.append(ok,cancel);box.append(h,p,pre,actions);bg.appendChild(box);document.body.appendChild(bg);
 };
 
-// player
+function rateLabel(r){return r+'×'}
+function applyRate(r){
+  if(!RATES.includes(r))r=1;
+  v.playbackRate=r;v.preservesPitch=true;
+  try{v.mozPreservesPitch=true}catch(e){}
+  try{v.webkitPreservesPitch=true}catch(e){}
+  $('speed').textContent=rateLabel(r);$('speed').dataset.rate=String(r);
+  $('speed').setAttribute('aria-label','מהירות ניגון '+rateLabel(r));
+  try{localStorage.setItem('subs-speed',String(r))}catch(e){}
+}
+function loadRate(){let r=parseFloat(localStorage.getItem('subs-speed'));if(!RATES.includes(r))r=1;applyRate(r)}
+$('speed').onclick=()=>{const cur=RATES.includes(v.playbackRate)?v.playbackRate:1;applyRate(RATES[(RATES.indexOf(cur)+1)%RATES.length])};
+
+function setTapMode(on){
+  playOnTap=!!on;
+  $('tapmode').classList.toggle('on',playOnTap);
+  $('tapmode').setAttribute('aria-pressed',playOnTap?'true':'false');
+  $('tapmode').setAttribute('aria-label',playOnTap?'לחיצה מנגנת':'לחיצה מעבירה בלבד');
+  $('tapmode').title=playOnTap?'לחיצה מנגנת':'לחיצה מעבירה בלבד';
+  $('tapmode').textContent=playOnTap?'▶':'⇥';
+  try{localStorage.setItem('subs-playOnTap',playOnTap?'1':'0')}catch(e){}
+}
+$('tapmode').onclick=()=>setTapMode(!playOnTap);
+try{if(localStorage.getItem('subs-playOnTap')==='0')setTapMode(false)}catch(e){}
+
 $('play').onclick=()=>v.paused?v.play():v.pause();
 $('back').onclick=()=>{v.currentTime=Math.max(0,v.currentTime-5)};
 $('fwd').onclick=()=>{v.currentTime=Math.min(v.duration||1e9,v.currentTime+5)};
-$('size').onclick=()=>{const w=$('vwrap');w.classList.toggle('show');$('size').classList.toggle('on',w.classList.contains('show'))};
-$('vbig').onclick=()=>$('vwrap').classList.toggle('big');
+$('size').onclick=()=>{const w=$('vwrap');w.classList.toggle('show');$('size').classList.toggle('on',w.classList.contains('show'));layoutChrome()};
+$('vbig').onclick=()=>{$('vwrap').classList.toggle('big');layoutChrome()};
 let follow=true;$('follow').onclick=()=>{follow=!follow;$('follow').classList.toggle('on',follow)};
 v.addEventListener('play',()=>$('play').textContent='❚❚');
 v.addEventListener('pause',()=>$('play').textContent='▶');
@@ -223,9 +311,8 @@ function tick(force){
   if(!seeking&&v.duration)$('seek').value=Math.round(t/v.duration*1000);
   $('time').textContent=fmt(t)+' / '+fmt(v.duration);
   let i=findIdx(t);
-  // after the word's end + gap, keep showing while within its line
   if(i!==nowIdx||force){
-    if(nowIdx>=0&&wordEls[nowIdx]){wordEls[nowIdx].classList.remove('now');wordEls[nowIdx].parentElement.classList.remove('cur')}
+    if(nowIdx>=0&&wordEls[nowIdx]){wordEls[nowIdx].classList.remove('now');wordEls[nowIdx].parentElement&&wordEls[nowIdx].parentElement.classList.remove('cur')}
     nowIdx=i;
     if(i>=0&&wordEls[i]){const we=wordEls[i];we.classList.add('now');we.parentElement.classList.add('cur');
       if(follow&&!v.paused){const r=we.getBoundingClientRect(),bottom=window.innerHeight-$('player').offsetHeight;if(r.top<60||r.bottom>bottom-10)we.scrollIntoView({block:'center',behavior:'smooth'})}}
@@ -239,7 +326,11 @@ function renderSub(i,t){
   sub.innerHTML=words.slice(a,b+1).map((w,k)=>{const j=a+k,txt=w.w.replace(/[<>&]/g,'');let s=j<=i?'<span class="on">'+txt+'</span>':txt;return bold.has(j)?'<b>'+s+'</b>':s}).join(' ');
 }
 (function loop(){if(!v.paused)tick();requestAnimationFrame(loop)})();
-v.addEventListener('timeupdate',()=>tick());v.addEventListener('seeked',()=>tick());v.addEventListener('loadedmetadata',()=>tick(true));
+v.addEventListener('timeupdate',()=>tick());
+v.addEventListener('seeked',()=>tick());
+v.addEventListener('loadedmetadata',()=>{loadRate();tick(true);layoutChrome()});
+window.addEventListener('resize',layoutChrome);
+loadRate();
 load();
 </script>
 </body>
