@@ -50,6 +50,15 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .sub .on{color:var(--acc)}
 .vbig{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:14px;padding:0}
 .err-box{padding:30px;text-align:center;color:#ff8a8a;font-size:18px}
+.hbtn.submit{background:var(--acc);color:#111;font-weight:800;font-size:16px;padding:8px 18px}
+.modal-bg{position:fixed;inset:0;background:#000a;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--card);border-radius:14px;padding:18px 16px;max-width:420px;width:100%;direction:rtl;font-family:'Assistant',sans-serif;box-shadow:0 8px 32px #000a}
+.modal h2{margin:0 0 8px;font-size:20px}
+.modal p{margin:0 0 12px;color:var(--mut);font-size:15px;line-height:1.5}
+.modal .preview{background:#12151b;border-radius:8px;padding:10px 12px;font-size:15px;line-height:1.55;margin-bottom:14px;white-space:pre-wrap}
+.modal .actions{display:flex;gap:8px;justify-content:flex-start}
+.modal .ok{background:var(--acc);color:#111;font:inherit;font-weight:800;border:0;border-radius:8px;padding:10px 16px}
+.modal .cancel{background:#262b35;color:var(--fg);font:inherit;border:0;border-radius:8px;padding:10px 16px}
 </style>
 </head>
 <body>
@@ -58,6 +67,7 @@ video{width:100%;height:100%;display:block;object-fit:contain}
   <span id="status" class="status">טוען…</span>
   <button class="hbtn" id="undo" title="ביטול פעולה אחרונה">↶ בטל</button>
   <button class="hbtn" id="export">ייצוא JSON</button>
+  <button class="hbtn submit" id="submit">הגש</button>
 </header>
 <div class="help">לחיצה על <b>מילה</b> מנגנת מאותו רגע · <b>B</b> מדגיש מילה · <b>↵</b> בין מילים מפצל לשורה חדשה · <b>×</b> בסוף שורה מחבר אותה לשורה הבאה · כל שינוי נשמר אוטומטית</div>
 <div id="lines"></div>
@@ -79,6 +89,7 @@ const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'applicatio
 const $=id=>document.getElementById(id);
 const v=$('v'),linesEl=$('lines'),statusEl=$('status');
 let words=[],breaks=new Set(),bold=new Set(),undoStack=[],saveTimer=null,saving=false,dirty=false,nowIdx=-1,wordEls=[];
+let songTitle='',performerName='',waNumber='';
 
 function setStatus(t,err){statusEl.textContent=t;statusEl.classList.toggle('err',!!err)}
 function fmt(t){if(!isFinite(t))t=0;const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+String(s).padStart(2,'0')}
@@ -91,6 +102,9 @@ async function load(){
     if(!rows.length){linesEl.innerHTML='<div class="err-box">הפרויקט "'+PROJECT.replace(/[<>&"]/g,'')+'" לא נמצא</div>';setStatus('לא נמצא',true);return}
     const row=rows[0];
     words=row.data.words||[];
+    songTitle=row.data.song_title||row.data.title||'';
+    performerName=row.data.performer_name||'';
+    waNumber=row.data.whatsapp_number||'';
     document.title=(row.data.title||'')+' · עורך כתוביות';
     $('title').textContent=row.data.title||'עורך כתוביות';
     const st=row.state||{};
@@ -158,6 +172,37 @@ $('export').onclick=()=>{
   words.forEach((w,i)=>{cur.push({text:w.w,start:w.s,end:w.e,bold:bold.has(i)});if(breaks.has(i)){cues.push({start:cur[0].start,end:cur[cur.length-1].end,text:cur.map(x=>x.text).join(' '),words:cur});cur=[]}});
   const blob=new Blob([JSON.stringify({project:PROJECT,exported_at:new Date().toISOString(),state:st,cues},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=PROJECT+'-subtitles.json';document.body.appendChild(a);a.click();a.remove();
+};
+
+function submitMessage(){
+  return 'היי, סיימתי לערוך את הכתוביות של השיר '+songTitle+' של '+performerName+', תוכל לשלוח לי סרטון בבקשה? (פרויקט: '+PROJECT+')';
+}
+function submitUrl(){
+  const digits=String(waNumber||'').replace(/[^\d]/g,'');
+  const base=digits?'https://wa.me/'+digits:'https://wa.me/';
+  return base+'?text='+encodeURIComponent(submitMessage());
+}
+function closeModal(){const m=$('modal');if(m)m.remove()}
+$('submit').onclick=()=>{
+  closeModal();
+  const bg=document.createElement('div');bg.className='modal-bg';bg.id='modal';
+  const box=document.createElement('div');box.className='modal';
+  const h=document.createElement('h2');h.textContent='הגשת העריכה';
+  const p=document.createElement('p');p.textContent='תיפתח הודעת WhatsApp מוכנה לשליחה:';
+  const pre=document.createElement('div');pre.className='preview';pre.textContent=submitMessage();
+  const actions=document.createElement('div');actions.className='actions';
+  const ok=document.createElement('button');ok.className='ok';ok.textContent='פתח WhatsApp';
+  const cancel=document.createElement('button');cancel.className='cancel';cancel.textContent='ביטול';
+  cancel.onclick=closeModal;
+  bg.addEventListener('click',e=>{if(e.target===bg)closeModal()});
+  ok.onclick=()=>{
+    const a=document.createElement('a');a.href=submitUrl();a.target='_blank';a.rel='noopener';
+    document.body.appendChild(a);a.click();a.remove();
+    closeModal();
+    setStatus('נפתח WhatsApp לשליחה');
+  };
+  actions.append(ok,cancel);
+  box.append(h,p,pre,actions);bg.appendChild(box);document.body.appendChild(bg);
 };
 
 // player
