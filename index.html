@@ -19,7 +19,7 @@ header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow
 .hbtn{font:inherit;font-size:14px;background:#262b35;color:var(--fg);border:0;border-radius:8px;padding:6px 10px}
 .help{font-size:14px;color:var(--mut);padding:8px 14px 0;line-height:1.5}
 .help b{color:var(--fg)}
-#lines{padding:8px 8px 260px}
+#lines{padding:8px 8px 90px}
 .line{display:flex;flex-wrap:wrap;align-items:center;gap:0;background:var(--card);border-radius:10px;padding:6px 6px 6px 4px;margin:6px 0;position:relative}
 .line.cur{outline:2px solid var(--acc2)}
 .num{font-size:11px;color:var(--mut);min-width:26px;text-align:center;align-self:flex-start;padding-top:8px}
@@ -29,25 +29,26 @@ header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow
 .w.now .wt{background:var(--acc2);color:#fff}
 .bb{font:inherit;font-size:10px;font-weight:800;width:17px;height:17px;padding:0;border-radius:4px;border:1px solid #3a4150;background:#20242d;color:var(--mut);margin-top:1px;line-height:15px}
 .w.bold .bb{background:var(--acc);color:#111;border-color:var(--acc)}
-.gap{font:inherit;width:20px;height:30px;padding:0;border:0;background:none;color:#4a5262;font-size:13px;border-radius:5px}
-.gap:active,.gap:hover{background:#2a3040;color:var(--acc2)}
-.x{font:inherit;margin-inline-start:auto;width:28px;height:28px;border-radius:50%;border:1px solid #533;background:#2a1d20;color:#ff8a8a;font-size:16px;line-height:24px;padding:0}
-.player{position:fixed;bottom:0;left:0;right:0;z-index:10;background:var(--bar);border-top:1px solid #262b35;padding:8px 10px calc(8px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:stretch}
-.vwrap{position:relative;flex:0 0 auto;height:170px;aspect-ratio:480/854;background:#000;border-radius:8px;overflow:hidden}
-.player.big .vwrap{height:min(62vh,560px)}
+.gap{font:inherit;min-width:38px;height:38px;margin:0 6px;padding:0 6px;border:1.5px solid #3d7fd6;background:#16294a;color:#9cc8ff;font-size:18px;font-weight:800;border-radius:19px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.gap:active,.gap:hover{background:var(--acc2);color:#fff;border-color:var(--acc2)}
+.x{font:inherit;margin-inline-start:auto;min-width:44px;height:38px;border-radius:19px;border:1.5px solid #e05555;background:#4a1a1f;color:#ffb3b3;font-size:20px;font-weight:800;line-height:1;padding:0 10px;display:inline-flex;align-items:center;justify-content:center}
+.x:active{background:#e05555;color:#fff}
+
+.player{position:fixed;bottom:0;left:0;right:0;z-index:10;background:var(--bar);border-top:1px solid #262b35;padding:0 8px env(safe-area-inset-bottom);height:calc(52px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:6px;direction:ltr}
+.ib{font:inherit;flex:0 0 auto;width:38px;height:38px;border:0;border-radius:50%;background:#262b35;color:var(--fg);font-size:13px;font-weight:700;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.ib.main{background:var(--acc2);width:42px;height:42px;font-size:17px}
+.ib.on{background:var(--acc);color:#111}
+.time{flex:0 0 auto;font-size:12px;color:var(--mut);direction:ltr;min-width:66px;text-align:center}
+input[type=range]{flex:1;min-width:40px;direction:ltr;accent-color:var(--acc2);height:4px;margin:0}
+.vwrap{position:fixed;left:8px;bottom:calc(60px + env(safe-area-inset-bottom));z-index:11;height:200px;aspect-ratio:480/854;background:#000;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px #000a;display:none}
+.vwrap.show{display:block}
+.vwrap.big{height:min(60vh,520px)}
 video{width:100%;height:100%;display:block;object-fit:contain}
-.sub{position:absolute;left:2px;right:2px;bottom:10%;text-align:center;font-size:11px;font-weight:600;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;direction:rtl;line-height:1.2}
-.player.big .sub{font-size:20px}
+.sub{position:absolute;left:2px;right:2px;bottom:10%;text-align:center;font-size:12px;font-weight:600;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;direction:rtl;line-height:1.2}
+.vwrap.big .sub{font-size:20px}
 .sub b{font-weight:800}
 .sub .on{color:var(--acc)}
-.ctl{flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0}
-.row{direction:ltr;display:flex;gap:8px;justify-content:center;align-items:center}
-.pbtn{font:inherit;font-size:17px;font-weight:600;background:#262b35;color:var(--fg);border:0;border-radius:12px;height:46px;min-width:58px;padding:0 10px}
-.pbtn.main{background:var(--acc2);min-width:66px;font-size:22px}
-.time{font-size:13px;color:var(--mut);text-align:center;direction:ltr}
-input[type=range]{width:100%;direction:ltr;accent-color:var(--acc2);height:26px}
-.small{font-size:13px;color:var(--mut);display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
-.small label{display:flex;gap:4px;align-items:center}
+.vbig{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:14px;padding:0}
 .err-box{padding:30px;text-align:center;color:#ff8a8a;font-size:18px}
 </style>
 </head>
@@ -60,18 +61,15 @@ input[type=range]{width:100%;direction:ltr;accent-color:var(--acc2);height:26px}
 </header>
 <div class="help">לחיצה על <b>מילה</b> מנגנת מאותו רגע · <b>B</b> מדגיש מילה · <b>↵</b> בין מילים מפצל לשורה חדשה · <b>×</b> בסוף שורה מחבר אותה לשורה הבאה · כל שינוי נשמר אוטומטית</div>
 <div id="lines"></div>
+<div class="vwrap" id="vwrap"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
 <div class="player" id="player">
-  <div class="vwrap" id="vwrap"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div></div>
-  <div class="ctl">
-    <div class="row">
-      <button class="pbtn" id="back" aria-label="5 שניות אחורה">⏪ 5</button>
-      <button class="pbtn main" id="play">▶</button>
-      <button class="pbtn" id="fwd" aria-label="5 שניות קדימה">5 ⏩</button>
-    </div>
-    <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="התקדמות">
-    <div class="time" id="time">0:00 / 0:00</div>
-    <div class="small"><label><input type="checkbox" id="follow" checked> גלילה עם השיר</label><button class="hbtn" id="size">הגדל וידאו</button></div>
-  </div>
+  <button class="ib" id="back" aria-label="5 שניות אחורה">−5</button>
+  <button class="ib main" id="play" aria-label="נגן / עצור">▶</button>
+  <button class="ib" id="fwd" aria-label="5 שניות קדימה">+5</button>
+  <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="התקדמות">
+  <span class="time" id="time">0:00 / 0:00</span>
+  <button class="ib" id="size" aria-label="הצגת וידאו" title="הצג / הסתר וידאו">🎬</button>
+  <button class="ib on" id="follow" aria-label="גלילה עם השיר" title="גלילה עם השיר">⇣</button>
 </div>
 <script>
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -166,7 +164,9 @@ $('export').onclick=()=>{
 $('play').onclick=()=>v.paused?v.play():v.pause();
 $('back').onclick=()=>{v.currentTime=Math.max(0,v.currentTime-5)};
 $('fwd').onclick=()=>{v.currentTime=Math.min(v.duration||1e9,v.currentTime+5)};
-$('size').onclick=()=>{const p=$('player');p.classList.toggle('big');$('size').textContent=p.classList.contains('big')?'הקטן וידאו':'הגדל וידאו'};
+$('size').onclick=()=>{const w=$('vwrap');w.classList.toggle('show');$('size').classList.toggle('on',w.classList.contains('show'))};
+$('vbig').onclick=()=>$('vwrap').classList.toggle('big');
+let follow=true;$('follow').onclick=()=>{follow=!follow;$('follow').classList.toggle('on',follow)};
 v.addEventListener('play',()=>$('play').textContent='❚❚');
 v.addEventListener('pause',()=>$('play').textContent='▶');
 let seeking=false;
@@ -183,7 +183,7 @@ function tick(force){
     if(nowIdx>=0&&wordEls[nowIdx]){wordEls[nowIdx].classList.remove('now');wordEls[nowIdx].parentElement.classList.remove('cur')}
     nowIdx=i;
     if(i>=0&&wordEls[i]){const we=wordEls[i];we.classList.add('now');we.parentElement.classList.add('cur');
-      if($('follow').checked&&!v.paused){const r=we.getBoundingClientRect(),bottom=window.innerHeight-$('player').offsetHeight;if(r.top<60||r.bottom>bottom-10)we.scrollIntoView({block:'center',behavior:'smooth'})}}
+      if(follow&&!v.paused){const r=we.getBoundingClientRect(),bottom=window.innerHeight-$('player').offsetHeight;if(r.top<60||r.bottom>bottom-10)we.scrollIntoView({block:'center',behavior:'smooth'})}}
     renderSub(i,t);
   }
 }
