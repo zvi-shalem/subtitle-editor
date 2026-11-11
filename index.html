@@ -148,8 +148,34 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .tok.on .fx-shake{animation:fx-shake .32s ease-in-out infinite}
 @keyframes fx-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px) rotate(-2deg)}75%{transform:translateX(2px) rotate(2deg)}}
 .tok .fx-whisper{opacity:.55;transform:scale(.82);transform-origin:center}
-.tok .fx-pop{animation:fx-pop .5s ease-out}
-@keyframes fx-pop{0%{transform:scale(.7);opacity:.6}45%{transform:scale(1.55);opacity:1}100%{transform:scale(1)}}
+.tok .fx-pop{animation:none}
+.tok.on .tok-live.fx-pop,
+.sub .tokword .tok.on .tok-live.fx-pop,
+.sub .tokword .tok:first-child.on .tok-live.fx-pop,
+.sub .tokword .tok:first-child.on.b .tok-live.fx-pop,
+.sub .tokword .tok:last-child.on .tok-live.fx-pop,
+.sub .tokword .tok:last-child:not(:first-child).on .tok-live.fx-pop,
+.sub .tokword .tok:last-child:not(:first-child).on.b .tok-live.fx-pop{animation:fx-pop .62s cubic-bezier(.12,.9,.22,1) both;transition:none}
+@keyframes fx-pop{
+  0%{transform:translate(-50%,-50%) scale(.12) rotate(-14deg);filter:brightness(8) saturate(2.6) contrast(1.5);text-shadow:0 0 8px #fff,0 0 22px #ffe566,0 0 40px #ff4d00}
+  7%{transform:translate(-50%,-50%) scale(2.45) rotate(10deg);filter:brightness(9) saturate(2.2);text-shadow:0 0 16px #fff,0 0 36px #ffcc33,0 0 70px #ff2a00}
+  16%{transform:translate(-50%,-50%) scale(.72) rotate(-7deg);filter:brightness(2.4) saturate(1.8);text-shadow:0 0 10px #ff8a00,0 0 24px #ff4d00}
+  30%{transform:translate(-50%,-50%) scale(1.35) rotate(4deg);filter:brightness(1.6);text-shadow:0 0 8px #ffcc33}
+  55%{transform:translate(-50%,-50%) scale(.96) rotate(-1deg);filter:brightness(1.15);text-shadow:none}
+  100%{transform:translate(-50%,-50%) scale(1) rotate(0);filter:none;text-shadow:none}
+}
+.vwrap.exploding{animation:vwrap-boom .38s linear}
+@keyframes vwrap-boom{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  6%{transform:translate(-9px,6px) rotate(-1.4deg)}
+  12%{transform:translate(8px,-7px) rotate(1.2deg)}
+  18%{transform:translate(-7px,-5px) rotate(-1deg)}
+  25%{transform:translate(7px,4px) rotate(.9deg)}
+  33%{transform:translate(-4px,5px) rotate(-.6deg)}
+  45%{transform:translate(3px,-3px) rotate(.4deg)}
+  62%{transform:translate(-2px,1px) rotate(-.15deg)}
+}
+#subFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
 .tok .fx-strike{text-decoration:line-through;text-decoration-thickness:2px}
 .tok .fx-repl{margin-inline-start:.35em;text-decoration:none;opacity:.95}
 .tok .fx-morph .from{animation:fx-morph-out .45s ease-in forwards}
@@ -227,7 +253,7 @@ body.cutmode .num{opacity:.28;pointer-events:none;transform:scale(.92);transform
 </header>
 <div class="help">לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה עורכת טקסט ואפקט · <b>B</b> סימון הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · כל שינוי נשמר</div>
 <div id="lines"></div>
-<div class="vwrap" id="vwrap"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
+<div class="vwrap" id="vwrap"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><canvas id="subFx" aria-hidden="true"></canvas><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
 <button type="button" id="vpause" title="השהה" aria-label="השהה">⏸</button>
 <div class="player" id="player">
   <button class="ib" id="back" aria-label="5 שניות אחורה">−5</button>
@@ -575,6 +601,7 @@ function openWordEdit(unit){
 function layoutChrome(){
   const h=$('hdr');if(h)document.documentElement.style.setProperty('--header-h',h.offsetHeight+'px');
   placePauseBtn();
+  resizeSubFx();
 }
 function placePauseBtn(){
   const btn=$('vpause'),vw=$('vwrap');if(!btn||!vw)return;
@@ -966,6 +993,7 @@ function tick(force){
     updateSung(t);
   }
   renderSub(u,pt,t);
+  maybePopBoom(u,pt);
 }
 function lineOf(u,pt){
   for(const ln of linesCache){
@@ -1016,6 +1044,109 @@ function renderSub(u,pt,t){
   if(html===lastSubHtml)return;
   lastSubHtml=html;sub.innerHTML=html;
 }
+let boomKey=null,boomParts=[],boomRings=[],boomFlash=0,boomRaf=0,boomCtx=null,boomLast=0;
+function resizeSubFx(){
+  const cv=$('subFx'),vw=$('vwrap');if(!cv||!vw)return;
+  const r=vw.getBoundingClientRect(),d=Math.max(1,devicePixelRatio||1);
+  const w=Math.max(1,Math.round(r.width)),h=Math.max(1,Math.round(r.height));
+  if(cv.width!==w*d||cv.height!==h*d){cv.width=w*d;cv.height=h*d;cv.style.width=w+'px';cv.style.height=h+'px'}
+  if(!boomCtx)boomCtx=cv.getContext('2d');
+  boomCtx.setTransform(d,0,0,d,0,0);
+}
+function maybePopBoom(u,pt){
+  if(!u||!pt){boomKey=null;return}
+  const fx=effectOf(u);
+  const key=(fx&&fx.type==='pop')?String(u.id)+':'+pt.off:null;
+  if(!key){boomKey=null;return}
+  if(boomKey===key)return;
+  const vw=$('vwrap');if(!vw||!vw.classList.contains('show'))return;
+  const tok=document.querySelector('#sub .tok.on');if(!tok)return;
+  boomKey=key;
+  startPopBoom(tok);
+}
+function startPopBoom(tok){
+  const vw=$('vwrap'),cv=$('subFx');if(!vw||!cv||!vw.classList.contains('show'))return;
+  resizeSubFx();
+  const vr=vw.getBoundingClientRect(),tr=tok.getBoundingClientRect();
+  const cx=tr.left+tr.width/2-vr.left, cy=tr.top+tr.height/2-vr.top;
+  const colors=['#ffffff','#fff7c2','#ffe566','#ffcc33','#ffb000','#ff8a00','#ff4d00','#ff2a00','#ff6a3a','#ffd27a'];
+  boomParts=[];boomRings=[];
+  const n=120;
+  for(let i=0;i<n;i++){
+    const ang=Math.random()*Math.PI*2, sp=10+Math.random()*28;
+    const hot=Math.random();
+    boomParts.push({
+      x:cx+(Math.random()-0.5)*8,y:cy+(Math.random()-0.5)*8,
+      vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-Math.random()*8,
+      rot:(Math.random()-0.5)*Math.PI,vr:(Math.random()-0.5)*1.6,
+      w:4+Math.random()*22,h:2+Math.random()*11,
+      life:1,decay:0.008+Math.random()*0.018,
+      color:colors[(Math.random()*colors.length)|0],
+      kind:hot>0.72?'spark':(hot>0.4?'shard':'ember'),
+      g:hot>0.72?0.18:0.42
+    });
+  }
+  for(let k=0;k<14;k++){
+    const ang=Math.random()*Math.PI*2, sp=16+Math.random()*24;
+    boomParts.push({x:cx,y:cy,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-4,rot:Math.random()*6,vr:(Math.random()-0.5)*2.2,w:10+Math.random()*26,h:5+Math.random()*14,life:1,decay:0.01+Math.random()*0.012,color:colors[(Math.random()*colors.length)|0],kind:'shard',g:0.38});
+  }
+  boomRings.push({x:cx,y:cy,r:6,vr:9,life:1,w:9,color:'rgba(255,255,255,0.95)'});
+  boomRings.push({x:cx,y:cy,r:2,vr:14,life:1,w:6,color:'rgba(255,80,0,0.9)'});
+  boomRings.push({x:cx,y:cy,r:4,vr:6,life:1,w:3,color:'rgba(255,200,60,0.7)'});
+  boomFlash=1;
+  vw.classList.remove('exploding');void vw.offsetWidth;vw.classList.add('exploding');
+  const done=()=>{vw.classList.remove('exploding');vw.removeEventListener('animationend',done)};
+  vw.addEventListener('animationend',done);
+  boomLast=-1;
+  if(!boomRaf)boomRaf=requestAnimationFrame(boomLoop);
+}
+function boomLoop(now){
+  const cv=$('subFx'),ctx=boomCtx,vw=$('vwrap');
+  if(!cv||!ctx||!vw){boomRaf=0;return}
+  if(now==null)now=performance.now();
+  const dt=boomLast<0?1:Math.min(2.5,Math.max(0.25,(now-boomLast)/16.67));
+  boomLast=now;
+  const r=vw.getBoundingClientRect();
+  ctx.clearRect(0,0,r.width,r.height);
+  if(boomFlash>0){
+    const g=ctx.createRadialGradient(r.width/2,r.height/2,4,r.width/2,r.height/2,Math.max(r.width,r.height)*0.7);
+    // flash centered on last ring if any
+    let fx=r.width/2,fy=r.height*0.8;
+    if(boomRings[0]){fx=boomRings[0].x;fy=boomRings[0].y}
+    const grd=ctx.createRadialGradient(fx,fy,2,fx,fy,Math.max(r.width,r.height)*0.65);
+    grd.addColorStop(0,'rgba(255,255,230,'+(boomFlash*0.95)+')');
+    grd.addColorStop(0.18,'rgba(255,180,40,'+(boomFlash*0.55)+')');
+    grd.addColorStop(0.45,'rgba(255,40,0,'+(boomFlash*0.22)+')');
+    grd.addColorStop(1,'rgba(255,0,0,0)');
+    ctx.fillStyle=grd;ctx.fillRect(0,0,r.width,r.height);
+    boomFlash=Math.max(0,boomFlash-0.07*dt);
+  }
+  for(let i=boomRings.length-1;i>=0;i--){
+    const rg=boomRings[i];rg.r+=rg.vr*dt;rg.life-=0.035*dt;rg.vr*=0.98;
+    if(rg.life<=0){boomRings.splice(i,1);continue}
+    ctx.save();ctx.globalAlpha=Math.max(0,rg.life);ctx.strokeStyle=rg.color;ctx.lineWidth=rg.w*rg.life;ctx.beginPath();ctx.arc(rg.x,rg.y,rg.r,0,6.28);ctx.stroke();ctx.restore();
+  }
+  for(let i=boomParts.length-1;i>=0;i--){
+    const q=boomParts[i];
+    q.vy+=q.g*dt;q.vx*=0.992;q.vy*=0.992;
+    q.x+=q.vx*dt;q.y+=q.vy*dt;q.rot+=q.vr*dt;q.life-=q.decay*dt;
+    if(q.life<=0){boomParts.splice(i,1);continue}
+    ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.rot);ctx.globalAlpha=Math.max(0,Math.min(1,q.life*1.15));
+    ctx.fillStyle=q.color;ctx.shadowColor=q.color;ctx.shadowBlur=q.kind==='spark'?16:9;
+    if(q.kind==='spark'){
+      ctx.fillRect(-q.w*0.85,-1.6,q.w*2.1,3.2);
+    }else if(q.kind==='ember'){
+      ctx.beginPath();ctx.arc(0,0,Math.max(1.6,q.w*0.34),0,6.28);ctx.fill();
+    }else{
+      ctx.beginPath();ctx.moveTo(-q.w/2,-q.h/2);ctx.lineTo(q.w/2,-q.h/3);ctx.lineTo(q.w/4,q.h/2);ctx.lineTo(-q.w/3,q.h/3);ctx.closePath();ctx.fill();
+      ctx.lineWidth=1.2;ctx.strokeStyle='rgba(255,255,220,0.55)';ctx.stroke();
+    }
+    ctx.restore();
+  }
+  if(boomParts.length||boomRings.length||boomFlash>0)boomRaf=requestAnimationFrame(boomLoop);
+  else{ctx.clearRect(0,0,r.width,r.height);boomRaf=0}
+}
+
 (function loop(){if(!v.paused)tick();requestAnimationFrame(loop)})();
 v.addEventListener('timeupdate',()=>tick());
 v.addEventListener('seeked',()=>tick());
