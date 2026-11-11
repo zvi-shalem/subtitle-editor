@@ -42,14 +42,15 @@ header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow
 .part.sung.marked .part-btn,.part.sung.marked .ch{font-weight:800}
 .part{display:inline-flex;align-items:center;justify-content:center;position:relative;vertical-align:middle}
 .part-sizer{visibility:hidden;pointer-events:none;font:inherit;font-size:21px;padding:4px 3px;line-height:1.25;font-weight:400;white-space:nowrap;display:inline-block}
-.w.cutword:not(.marked) .part-sizer{font-size:calc(21px * 1.1);padding:calc(4px * 1.1) calc(3px * 1.1)}
-.w.marked .part-sizer{font-weight:800;font-size:calc(21px * 1.25);padding:calc(4px * 1.25) calc(3px * 1.25)}
-.part.reserved .part-btn{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;margin:0}
+.w.cutword .part:not(.marked) .part-sizer{font-size:calc(21px * 1.1);padding:calc(4px * 1.1) calc(3px * 1.1)}
+.part.marked .part-sizer{font-weight:800;font-size:calc(21px * 1.25);padding:calc(4px * 1.25) calc(3px * 1.25)}
+.part-main{display:inline-block;position:relative;vertical-align:middle}
+.part-main.reserved .part-btn{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;margin:0}
 .w.edited{box-shadow:inset 0 -2px 0 rgba(255,204,51,.7)}
 .w.hidden-w{opacity:.55}
 .w.hidden-w .ghost{font:inherit;font-size:14px;color:var(--mut);padding:4px 6px;background:none;border:0}
 .bb{font:inherit;font-size:10px;font-weight:800;width:17px;height:17px;padding:0;border-radius:4px;border:1px solid #3a4150;background:#20242d;color:var(--mut);margin-inline-start:1px;line-height:15px}
-.w.marked .bb{background:var(--acc);color:#111;border-color:var(--acc)}
+.w.marked .bb,.part.marked .bb{background:var(--acc);color:#111;border-color:var(--acc)}
 .gap{font:inherit;min-width:34px;height:34px;margin:0 4px;padding:0 5px;border:1.5px solid #3d7fd6;background:#16294a;color:#9cc8ff;font-size:17px;font-weight:800;border-radius:17px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 .gap:active,.gap:hover{background:var(--acc2);color:#fff;border-color:var(--acc2)}
 .x{font:inherit;min-width:34px;height:34px;margin:0 4px 0 2px;border-radius:17px;border:1.5px solid #e05555;background:#4a1a1f;color:#ffb3b3;font-size:18px;font-weight:800;line-height:1;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;align-self:center}
@@ -95,22 +96,21 @@ input[type=range]{flex:1;min-width:40px;direction:ltr;accent-color:var(--acc2);h
 video{width:100%;height:100%;display:block;object-fit:contain}
 .sub{position:absolute;left:2px;right:2px;bottom:10%;text-align:center;font-size:12px;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;direction:rtl;line-height:1.35;font-weight:400}
 .vwrap.big .sub{font-size:20px}
-.sub .tokword{display:inline-block;white-space:nowrap;vertical-align:baseline;max-width:100%;padding-inline:0.16em}
+.sub .tokword{display:inline-flex;align-items:baseline;white-space:nowrap;vertical-align:baseline;max-width:100%;padding-inline:0.16em;gap:0}
 .sub .tok{display:inline-block;position:relative;transform-origin:center center;font-weight:400;vertical-align:baseline;transform:none}
 .sub .tok-sizer{visibility:hidden;display:inline-block;white-space:nowrap;font-weight:400;pointer-events:none;line-height:1}
-.sub .tokword .tok-sizer{font-size:1em}
 .sub .tok.slot-b .tok-sizer{font-weight:800;font-size:1.25em}
-.sub .tokword .tok.slot-b .tok-sizer{font-weight:800;font-size:1em}
 .sub .tok-live{position:absolute;left:50%;top:50%;translate:-50% -50%;scale:1;transform:none;transform-origin:center center;white-space:nowrap;font-weight:400;transition:scale .16s ease,color .16s ease}
 .sub .tok.on .tok-live{color:var(--acc);scale:1.1}
 .sub .tok.b .tok-live{font-weight:800}
 .sub .tok.on.b .tok-live{font-weight:800;color:var(--acc);scale:1.25}
-.sub .tokword .tok:first-child .tok-live{left:auto;right:auto;inset-inline-start:auto;inset-inline-end:0;translate:0 -50%;transform-origin:inline-end center}
-.sub .tokword .tok:first-child.on .tok-live{scale:1.1}
-.sub .tokword .tok:first-child.on.b .tok-live{scale:1.25}
-.sub .tokword .tok:last-child:not(:first-child) .tok-live{left:auto;right:auto;inset-inline-start:0;inset-inline-end:auto;translate:0 -50%;transform-origin:inline-start center}
-.sub .tokword .tok:last-child:not(:first-child).on .tok-live{scale:1.1}
-.sub .tokword .tok:last-child:not(:first-child).on.b .tok-live{scale:1.25}
+/* cut parts stay one word: in-flow font-size so a lit bold part shifts neighbors instead of overlapping */
+.sub .tokword .tok{display:inline-block;position:relative}
+.sub .tokword .tok-sizer{display:none}
+.sub .tokword .tok-live{position:static;left:auto;right:auto;top:auto;inset:auto;translate:none;scale:none;transform:none;font-size:1em;font-weight:400;transition:font-size .16s ease,color .16s ease,font-weight .16s ease}
+.sub .tokword .tok.on .tok-live{color:var(--acc);font-size:1.1em;scale:none;translate:none}
+.sub .tokword .tok.b .tok-live{font-weight:800}
+.sub .tokword .tok.on.b .tok-live{font-weight:800;color:var(--acc);font-size:1.25em;scale:none;translate:none}
 .vbig{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:14px;padding:0}
 #vpause{position:fixed;z-index:11;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:16px;line-height:1;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px #0006;cursor:pointer}
 #vpause.show{display:inline-flex}
@@ -142,6 +142,11 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .sheet .sactions{display:flex;gap:8px;justify-content:flex-start}
 .sheet .sactions .ok{background:var(--acc);color:#111;font:inherit;font-weight:800;border:0;border-radius:8px;padding:8px 14px}
 .sheet .sactions .cancel{background:#262b35;color:var(--fg);font:inherit;border:0;border-radius:8px;padding:8px 14px}
+.sheet .fx-blocked{font-size:14px;color:var(--mut);margin:4px 0 10px;line-height:1.45}
+.slice-bolds{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:4px 12px 0;direction:rtl;flex:0 0 auto;background:#fff}
+.slice-bolds[hidden]{display:none}
+.slice-bolds .sbb{font-family:inherit;font-size:14px;display:inline-flex;align-items:center;gap:5px;border:1.5px solid #0d9488;border-radius:10px;background:#fff;color:#0f2e2b;padding:4px 10px;cursor:pointer}
+.slice-bolds .sbb.on{background:#0d9488;color:#fff;font-weight:800}
 .tok-fx,.tok .fx{display:inline-block;transform-origin:center center}
 .tok .fx-shake{animation:none}
 .tok.on .tok-fx.fx-shake{animation:fx-shake .32s ease-in-out infinite}
@@ -188,7 +193,7 @@ body.cutmode .w{background:#20242d;outline:1.5px solid #8b93a3;outline-offset:0;
 body.cutmode .w.cutword{outline-color:#9aa3b2}
 body.cutmode .gap,
 body.cutmode .x,
-body.cutmode .bb,
+body.cutmode .w > .bb,
 body.cutmode .nbtn,
 body.cutmode .sbtn,
 body.cutmode .sib-edit,
@@ -268,6 +273,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
       <svg id="sliceOverlay"></svg>
     </div>
   </div>
+  <div id="sliceBolds" class="slice-bolds" hidden></div>
   <div class="controls">
     <button type="button" class="act ghost" id="sliceCancel" title="ביטול" aria-label="ביטול">✕</button>
     <button type="button" class="act submit" id="sliceOk" title="אישור" aria-label="אישור">✓</button>
@@ -282,7 +288,7 @@ const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'applicatio
 const RATES=[1,1.5,2,2.5];
 const $=id=>document.getElementById(id);
 const v=$('v'),linesEl=$('lines'),statusEl=$('status');
-let words=[],breaks=new Set(),bold=new Set(),notes={},wordCuts=[],cutBreaks=new Set(),silences=new Set(),silenceText={},wordEdits={},effects={};
+let words=[],breaks=new Set(),bold=new Set(),notes={},wordCuts=[],cutBreaks=new Set(),silences=new Set(),silenceText={},wordEdits={},effects={},partBold={};
 let undoStack=[],saveTimer=null,saving=false,queued=false;
 let dirtyFlags={layout:false,notes:false,cuts:false,silences:false,edits:false,effects:false};
 let nowId=null,nowOff=0,unitEls={},partEls={},unitsCache=[],linesCache=[];
@@ -296,7 +302,7 @@ function hasOwn(o,k){return Object.prototype.hasOwnProperty.call(o,k)}
 function cloneNotes(n){try{return JSON.parse(JSON.stringify(n||{}))}catch(e){return {}}}
 function parseId(val){return (val!=null && /^-?\d+$/.test(String(val)))?+val:val}
 function sortMixed(arr){return [...arr].sort((a,b)=>{const ap=String(a).split(/[.:]/).map(Number),bp=String(b).split(/[.:]/).map(Number);for(let i=0;i<Math.max(ap.length,bp.length);i++){const d=(ap[i]||0)-(bp[i]||0);if(d)return d}return 0})}
-const FLAG_KEYS=['layout','notes','cuts','silences','edits','effects'];
+const FLAG_KEYS=['layout','notes','cuts','silences','edits','effects','partBold'];
 function emptyFlags(){const o={};FLAG_KEYS.forEach(k=>o[k]=false);return o}
 function anyDirty(f){return FLAG_KEYS.some(k=>f[k])}
 function restoreFlags(flags){FLAG_KEYS.forEach(k=>{if(flags[k])dirtyFlags[k]=true})}
@@ -312,7 +318,25 @@ const FX=[
   {type:'pop',icon:'💥',label:'פיצוץ',need:false,field:''}
 ];
 function fxMeta(type){return FX.find(x=>x.type===type)||FX[0]}
-function effectOf(u){if(!u)return null;return effects[String(u.id)]||effects[String(u.orig)]||null}
+function effectOf(u){if(!u)return null;if(cutsFor(u).length)return null;return effects[String(u.id)]||effects[String(u.orig)]||null}
+function dropEffectFor(u){
+  if(!u)return;
+  let dropped=false;
+  [u.id,u.orig].forEach(k=>{if(k==null)return;k=String(k);if(effects[k]){delete effects[k];dropped=true}});
+  if(dropped)dirtyFlags.effects=true;
+}
+function partBoldKey(u,off){return String(u.id)+':'+off}
+function isPartBold(u,off){const k=partBoldKey(u,off);if(hasOwn(partBold,k))return !!partBold[k];return isBold(u)}
+function togglePartBold(u,off){const k=partBoldKey(u,off),next=!isPartBold(u,off);if(next===isBold(u))delete partBold[k];else partBold[k]=next}
+function clearPartBoldFor(u){if(!u)return;const pref=String(u.id)+':';Object.keys(partBold).forEach(k=>{if(k.startsWith(pref))delete partBold[k]})}
+function prunePartBold(u){
+  if(!u)return;
+  const pref=String(u.id)+':';
+  if(!cutsFor(u).length){clearPartBoldFor(u);return}
+  const valid=new Set(partTimes(u).map(p=>pref+p.off));
+  Object.keys(partBold).forEach(k=>{if(k.startsWith(pref)&&!valid.has(k))delete partBold[k]});
+}
+function allPartsBold(u){return partTimes(u).every(p=>isPartBold(u,p.off))}
 
 function editString(i){const k=String(i);return hasOwn(wordEdits,k)?wordEdits[k]:(words[i]?words[i].w:'')}
 function tokensOf(i){
@@ -356,6 +380,7 @@ function toggleBold(u){
     if(!hasAnySubBold(u.orig) && bold.has(u.orig)){for(let s=0;s<u.nsub;s++)bold.add(u.orig+'.'+s)}
     if(bold.has(u.id))bold.delete(u.id);else bold.add(u.id);
   }else{if(bold.has(u.orig))bold.delete(u.orig);else bold.add(u.orig)}
+  clearPartBoldFor(u);dirtyFlags.partBold=true;
 }
 function pruneSubKeys(i,nsub){
   const prefix=i+'.', orig=String(i);
@@ -376,6 +401,14 @@ function pruneSubKeys(i,nsub){
   };
   wordCuts=wordCuts.filter(keepCut);
   cutBreaks=new Set([...cutBreaks].filter(keepCut));
+  const keepPB=k=>{
+    const id=String(k).split(':')[0];
+    if(id===orig)return nsub<=1;
+    if(!id.startsWith(prefix))return true;
+    const sub=+id.slice(prefix.length);
+    return nsub>1 && Number.isInteger(sub) && sub<nsub;
+  };
+  Object.keys(partBold).forEach(k=>{if(!keepPB(k))delete partBold[k]});
 }
 function cutsFor(u){
   const pref=String(u.id)+':';
@@ -429,13 +462,14 @@ async function load(){
     silenceText=(st.silenceText&&typeof st.silenceText==='object'&&!Array.isArray(st.silenceText))?{...st.silenceText}:{};
     wordEdits=(st.wordEdits&&typeof st.wordEdits==='object'&&!Array.isArray(st.wordEdits))?{...st.wordEdits}:{};
     effects=(st.effects&&typeof st.effects==='object'&&!Array.isArray(st.effects))?cloneObj(st.effects):{};
+    partBold=(st.partBold&&typeof st.partBold==='object'&&!Array.isArray(st.partBold))?cloneObj(st.partBold):{};
     if(words.length)breaks.add(lastWordIdx());
     v.src=data.video_url||'';
     render();setStatus('נשמר ✓');layoutChrome();
   }catch(e){setStatus('שגיאה בטעינה',true);linesEl.innerHTML='<div class="err-box">לא הצלחתי לטעון. נסה לרענן.</div>'}
 }
 
-function snapshot(){undoStack.push({b:[...breaks],o:[...bold],n:cloneNotes(notes),c:[...wordCuts],cb:[...cutBreaks],s:[...silences],st:cloneObj(silenceText),e:{...wordEdits},f:cloneObj(effects)});if(undoStack.length>200)undoStack.shift()}
+function snapshot(){undoStack.push({b:[...breaks],o:[...bold],n:cloneNotes(notes),c:[...wordCuts],cb:[...cutBreaks],s:[...silences],st:cloneObj(silenceText),e:{...wordEdits},f:cloneObj(effects),pb:cloneObj(partBold)});if(undoStack.length>200)undoStack.shift()}
 function change(fn,kind){snapshot();fn();if(kind)dirtyFlags[kind]=true;render(true);queueSave()}
 
 function hideSnack(){clearTimeout(snackTimer);snackTimer=null;const s=$('snack');if(s)s.remove()}
@@ -543,24 +577,28 @@ function openWordEdit(unit){
     cutBtn.onclick=e=>{e.stopPropagation();closeWordEdit();openSlicePanel(unit)};
     row.appendChild(cutBtn);
   }
+  const cutLocked=cutsFor(unit).length>0;
   const chips=document.createElement('div');chips.className='chips';
   const fieldWrap=document.createElement('div');
   const fieldLab=document.createElement('div');fieldLab.className='slabel';
   const inp2=document.createElement('input');inp2.type='text';inp2.dir='rtl';inp2.value=cur.text2||'';
+  const blocked=document.createElement('div');blocked.className='fx-blocked';blocked.textContent='למילה חתוכה אין אפקטים';
   function syncField(){
     const meta=fxMeta(chosen);
-    fieldWrap.style.display=meta.need?'block':'none';
+    fieldWrap.style.display=(!cutLocked && meta.need)?'block':'none';
     fieldLab.textContent=meta.field||'';
     inp2.setAttribute('aria-label',meta.field||'');
     inp2.placeholder=meta.field||'';
     inp2.required=meta.need==='required';
   }
-  FX.forEach(fx=>{
-    const c=document.createElement('button');c.type='button';c.className='chip'+(fx.type===chosen?' on':'');
-    c.textContent=fx.icon+' '+fx.label;c.title=fx.label;c.setAttribute('aria-label',fx.label);c.dataset.type=fx.type;
-    c.onclick=e=>{e.stopPropagation();chosen=fx.type;chips.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x.dataset.type===chosen));syncField();if(metaNeeds(fx))setTimeout(()=>inp2.focus(),0)};
-    chips.appendChild(c);
-  });
+  if(!cutLocked){
+    FX.forEach(fx=>{
+      const c=document.createElement('button');c.type='button';c.className='chip'+(fx.type===chosen?' on':'');
+      c.textContent=fx.icon+' '+fx.label;c.title=fx.label;c.setAttribute('aria-label',fx.label);c.dataset.type=fx.type;
+      c.onclick=e=>{e.stopPropagation();chosen=fx.type;chips.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x.dataset.type===chosen));syncField();if(metaNeeds(fx))setTimeout(()=>inp2.focus(),0)};
+      chips.appendChild(c);
+    });
+  }
   function metaNeeds(fx){return !!(fx&&fx.need)}
   fieldWrap.append(fieldLab,inp2);syncField();
   const actions=document.createElement('div');actions.className='sactions';
@@ -573,7 +611,7 @@ function openWordEdit(unit){
       if(val===orig)delete wordEdits[k];else wordEdits[k]=val;
       const n=(!hasOwn(wordEdits,k)||val===orig)?1:tokensOf(unit.orig).length;
       pruneSubKeys(unit.orig,n<=1?1:n);
-      if(!chosen||chosen==='none')delete effects[k];
+      if(cutLocked || !chosen||chosen==='none')delete effects[k];
       else{const ev={type:chosen};if((fxMeta(chosen).need)&&text2)ev.text2=text2;else if(text2)ev.text2=text2;effects[k]=ev}
       dirtyFlags.layout=true;dirtyFlags.cuts=true;dirtyFlags.silences=true;dirtyFlags.effects=true;
     },'edits');
@@ -581,7 +619,8 @@ function openWordEdit(unit){
   const ok=document.createElement('button');ok.className='ok';ok.textContent='שמירה';ok.onclick=e=>{e.stopPropagation();save()};
   const cancel=document.createElement('button');cancel.className='cancel';cancel.textContent='ביטול';cancel.onclick=e=>{e.stopPropagation();closeWordEdit()};
   actions.append(ok,cancel);
-  sheet.append(h,row,chips,fieldWrap,actions);
+  if(cutLocked)sheet.append(h,row,blocked,actions);
+  else sheet.append(h,row,chips,fieldWrap,actions);
   bg.addEventListener('click',()=>closeWordEdit());
   sheet.addEventListener('click',e=>e.stopPropagation());
   inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save()}if(e.key==='Escape'){e.preventDefault();closeWordEdit()}};
@@ -613,22 +652,32 @@ function appendCutLine(w,u,off,broke){
   cl.title=lab;cl.setAttribute('aria-label',lab);w.appendChild(cl);
 }
 function appendPart(w,u,pt){
-  const part=document.createElement('span');part.className='part'+(isBold(u)?' marked':'');
+  const boldish=isPartBold(u,pt.off),hasCuts=cutsFor(u).length>0;
+  const part=document.createElement('span');part.className='part'+(boldish?' marked':'');
   part.dataset.id=String(u.id);part.dataset.off=String(pt.off);
   partEls[u.id+':'+pt.off]=part;
-  const reserve=isBold(u)||cutsFor(u).length>0;
+  const main=document.createElement('span');main.className='part-main';
+  const reserve=boldish||hasCuts;
   if(reserve){
     const sz=document.createElement('span');sz.className='part-sizer';sz.setAttribute('aria-hidden','true');sz.textContent=pt.text;
-    part.appendChild(sz);part.classList.add('reserved');
+    main.appendChild(sz);main.classList.add('reserved');
   }
-  const b=document.createElement('button');b.className='part-btn';b.textContent=pt.text;b.dataset.act='seek';b.dataset.id=String(u.id);b.dataset.off=String(pt.off);part.appendChild(b);
+  const b=document.createElement('button');b.className='part-btn';b.textContent=pt.text;b.dataset.act='seek';b.dataset.id=String(u.id);b.dataset.off=String(pt.off);main.appendChild(b);
+  part.appendChild(main);
+  if(hasCuts){
+    const bb=document.createElement('button');bb.className='bb';bb.textContent='B';
+    bb.dataset.act='partbold';bb.dataset.id=String(u.id);bb.dataset.off=String(pt.off);
+    bb.title='הדגשה לחלק';bb.setAttribute('aria-label','הדגשה לחלק');
+    part.appendChild(bb);
+  }
   w.appendChild(part);
 }
 function makeWordShell(u){
   const w=document.createElement('span');
   const hasCuts=cutsFor(u).length>0;
   const fx=effectOf(u);
-  w.className='w'+(isBold(u)?' marked':'')+(hasCuts?' cutword':'')+(u.edited?' edited':'')+(u.hidden?' hidden-w':'')+(fx&&fx.type&&fx.type!=='none'?' has-fx fx-'+fx.type:'');
+  const wordMarked=hasCuts?allPartsBold(u):isBold(u);
+  w.className='w'+(wordMarked?' marked':'')+(hasCuts?' cutword':'')+(u.edited?' edited':'')+(u.hidden?' hidden-w':'')+(fx&&fx.type&&fx.type!=='none'?' has-fx fx-'+fx.type:'');
   w.dataset.id=String(u.id);
   if(u.hidden){
     const g=document.createElement('button');g.className='ghost';g.textContent='—';
@@ -640,8 +689,10 @@ function makeWordShell(u){
     const badge=document.createElement('span');badge.className='fx-badge';const meta=fxMeta(fx.type);
     badge.textContent=meta.icon;badge.title=meta.label;w.appendChild(badge);
   }
-  const bb=document.createElement('button');bb.className='bb';bb.textContent='B';bb.dataset.act='bold';bb.dataset.id=String(u.id);bb.title='הדגשה';bb.setAttribute('aria-label','הדגשה');
-  w._bb=bb;
+  if(!hasCuts){
+    const bb=document.createElement('button');bb.className='bb';bb.textContent='B';bb.dataset.act='bold';bb.dataset.id=String(u.id);bb.title='הדגשה';bb.setAttribute('aria-label','הדגשה');
+    w._bb=bb;
+  }
   return w;
 }
 
@@ -745,6 +796,7 @@ linesEl.addEventListener('click',e=>{
       const pt=partTimes(u).find(p=>p.off===off);
       seekTo((pt?pt.s:u.s)-0.05);
     }else if(a==='bold'){const u=findUnit(id);if(u)change(()=>toggleBold(u),'layout')}
+    else if(a==='partbold'){const u=findUnit(id);if(u)change(()=>{togglePartBold(u,+el.dataset.off)},'partBold')}
     else if(a==='split')change(()=>breaks.add(parseId(id)),'layout')
     else if(a==='merge'){
       const kind=el.dataset.kind,k=el.dataset.key,tx=textsAround(kind,k);
@@ -757,10 +809,10 @@ linesEl.addEventListener('click',e=>{
     }else if(a==='note')openNoteMenu(el,key)
     else if(a==='siltext'){e.stopPropagation();silEditKey=key;render(true);const inp=$('silInp');if(inp)setTimeout(()=>{inp.focus();inp.select()},0)}
     else if(a==='silence'||a==='unsilence')change(()=>{if(silences.has(key)){silences.delete(key);delete silenceText[key]}else silences.add(key)},'silences')
-    else if(a==='addcut')change(()=>{const k=id+':'+el.dataset.off;if(!wordCuts.includes(k))wordCuts.push(k)},'cuts')
+    else if(a==='addcut')change(()=>{const k=id+':'+el.dataset.off;if(!wordCuts.includes(k))wordCuts.push(k);const u=findUnit(id);if(u){dropEffectFor(u);prunePartBold(u);dirtyFlags.partBold=true}},'cuts')
     else if(a==='cutline'){
       const k=id+':'+el.dataset.off;
-      if(cutMode)change(()=>{wordCuts=wordCuts.filter(x=>x!==k);cutBreaks.delete(k)},'cuts');
+      if(cutMode)change(()=>{wordCuts=wordCuts.filter(x=>x!==k);cutBreaks.delete(k);const u=findUnit(id);if(u){prunePartBold(u);dirtyFlags.partBold=true}},'cuts');
       else change(()=>{if(cutBreaks.has(k))cutBreaks.delete(k);else cutBreaks.add(k)},'cuts');
     }
     return;
@@ -790,8 +842,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('wsheet')){e.prev
 $('cutmode').onclick=()=>{cutMode=!cutMode;$('cutmode').setAttribute('aria-pressed',cutMode?'true':'false');document.body.classList.toggle('cutmode',cutMode);render(true)};
 $('undo').onclick=()=>{
   hideSnack();const s=undoStack.pop();if(!s)return;
-  breaks=new Set(s.b);bold=new Set(s.o);notes=cloneNotes(s.n);wordCuts=[...s.c];cutBreaks=new Set(s.cb);silences=new Set(s.s);silenceText=cloneObj(s.st||{});wordEdits={...s.e};effects=cloneObj(s.f);
-  dirtyFlags={layout:true,notes:true,cuts:true,silences:true,edits:true,effects:true};render(true);queueSave();
+  breaks=new Set(s.b);bold=new Set(s.o);notes=cloneNotes(s.n);wordCuts=[...s.c];cutBreaks=new Set(s.cb);silences=new Set(s.s);silenceText=cloneObj(s.st||{});wordEdits={...s.e};effects=cloneObj(s.f);partBold=cloneObj(s.pb||{});
+  dirtyFlags={layout:true,notes:true,cuts:true,silences:true,edits:true,effects:true,partBold:true};render(true);queueSave();
 };
 
 function exportState(){
@@ -803,6 +855,7 @@ function exportState(){
   if(Object.keys(silenceText).length)o.silenceText={...silenceText};
   if(Object.keys(wordEdits).length)o.wordEdits={...wordEdits};
   if(Object.keys(effects).length)o.effects=cloneObj(effects);
+  if(Object.keys(partBold).length)o.partBold=cloneObj(partBold);
   return o;
 }
 function queueSave(){queued=true;setStatus('שומר…');clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
@@ -831,6 +884,7 @@ async function save(){
     if(flags.silences){if(silences.size)merged.silences=sortMixed(silences);else delete merged.silences;if(Object.keys(silenceText).length)merged.silenceText={...silenceText};else delete merged.silenceText}
     if(flags.edits){if(Object.keys(wordEdits).length)merged.wordEdits={...wordEdits};else delete merged.wordEdits}
     if(flags.effects){if(Object.keys(effects).length)merged.effects=cloneObj(effects);else delete merged.effects}
+    if(flags.partBold){if(Object.keys(partBold).length)merged.partBold=cloneObj(partBold);else delete merged.partBold}
     const body=JSON.stringify({state:merged,updated_at:new Date().toISOString()});
     try{localStorage.setItem('subs-'+PROJECT,body)}catch(e){}
     const url=`${SB_URL}/rest/v1/subtitle_projects?id=eq.${encodeURIComponent(PROJECT)}`+(row.updated_at?`&updated_at=eq.${encodeURIComponent(row.updated_at)}`:'');
@@ -845,6 +899,7 @@ async function save(){
     if(!flags.silences && !dirtyFlags.silences){silences=new Set(Array.isArray(server.silences)?server.silences:[]);silenceText=(server.silenceText&&typeof server.silenceText==='object'&&!Array.isArray(server.silenceText))?{...server.silenceText}:{};needRender=true}
     if(!flags.edits && !dirtyFlags.edits){wordEdits=(server.wordEdits&&typeof server.wordEdits==='object'&&!Array.isArray(server.wordEdits))?{...server.wordEdits}:{};needRender=true}
     if(!flags.effects && !dirtyFlags.effects){effects=(server.effects&&typeof server.effects==='object'&&!Array.isArray(server.effects))?cloneObj(server.effects):{};needRender=true}
+    if(!flags.partBold && !dirtyFlags.partBold){partBold=(server.partBold&&typeof server.partBold==='object'&&!Array.isArray(server.partBold))?cloneObj(server.partBold):{};needRender=true}
     if(needRender && !anyDirty(dirtyFlags))render(true);
     if(!queued && !anyDirty(dirtyFlags))setStatus('נשמר ✓');
   }catch(e){
@@ -856,13 +911,13 @@ async function save(){
 }
 window.addEventListener('beforeunload',e=>{if(queued||anyDirty(dirtyFlags)){e.preventDefault();e.returnValue=''}});
 
-function cuePart(it){return {text:it.pt.text,start:it.pt.s,end:it.pt.e,bold:isBold(it.u),id:it.u.id,off:it.pt.off}}
+function cuePart(it){return {text:it.pt.text,start:it.pt.s,end:it.pt.e,bold:isPartBold(it.u,it.pt.off),id:it.u.id,off:it.pt.off}}
 function cueWordsFromLine(ln){
   const words=[];
   ln.items.forEach(it=>{
     if(it.u.hidden||!it.pt||!it.pt.text)return;
     const seg=cuePart(it), prev=words[words.length-1];
-    if(prev&&prev.id===seg.id){prev.parts.push(seg);prev.text+=seg.text;prev.end=seg.end}
+    if(prev&&prev.id===seg.id){prev.parts.push(seg);prev.text+=seg.text;prev.end=seg.end;prev.bold=prev.parts.every(p=>p.bold)}
     else words.push({text:seg.text,start:seg.start,end:seg.end,bold:seg.bold,id:seg.id,off:seg.off,parts:[seg]});
   });
   return words;
@@ -947,11 +1002,10 @@ $('seek').addEventListener('change',()=>{seeking=false});
 
 function updateSung(t){
   for(const u of unitsCache){
-    const marked=isBold(u);
     const pts=partTimes(u);
     let any=false;
     pts.forEach(pt=>{
-      const started=marked && t+0.02>=pt.s;
+      const started=isPartBold(u,pt.off) && t+0.02>=pt.s;
       if(started)any=true;
       const pe=partEls[u.id+':'+pt.off];
       if(pe){const part=pe.classList&&pe.classList.contains('part')?pe:(pe.closest?pe.closest('.part')||pe:pe);if(part&&part.classList)part.classList.toggle('sung',started)}
@@ -1027,7 +1081,7 @@ function renderSub(u,pt,t){
       }
       const fxCls=typ?' fx fx-'+typ:'';
       const started=t+0.02>=it.pt.s;
-      const boldish=isBold(it.u);
+      const boldish=isPartBold(it.u,it.pt.off);
       const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'');
       html+='<span class="'+cls+'"><span class="tok-sizer" aria-hidden="true">'+esc(it.pt.text)+'</span><span class="tok-live"><span class="tok-fx'+(fxCls||'')+'">'+inner+'</span></span></span>';
     });
@@ -1168,7 +1222,7 @@ function saveSilText(key,val){
 /* ===== scissors cut panel (ported from hataama slice.html, lines mode default) ===== */
 const SLICE_TUTORIAL_KEY='subs-slice-tutorial-seen';
 const WORD_FONT_FLOOR=28;
-let sliceUnit=null, sliceOpen=false, sliceCuts={}, sliceCutHistory=[], sliceClusters=[], sliceBoundaryX=[], sliceBandTol=[], sliceWordTop=0, sliceWordBottom=0, slicePanX=0, sliceLastBIdx=[], sliceVariant='lines';
+let sliceUnit=null, sliceOpen=false, sliceCuts={}, sliceCutHistory=[], sliceClusters=[], sliceBoundaryX=[], sliceBandTol=[], sliceWordTop=0, sliceWordBottom=0, slicePanX=0, sliceLastBIdx=[], sliceVariant='lines', slicePartBold={};
 let slicing=false, pts=[], lastP=null, sliceThrottle=false, sliceDragMode=undefined, sliceSwipePath=[], sliceStartY=0, swipeBtnDone={}, swipeBtnHit=false;
 let sliceParticles=[], sliceRings=[], sliceFlashes=[], sliceCtx=null, sliceFxRaf=0;
 
@@ -1220,7 +1274,36 @@ function sliceMeasure(){
   for(let t=0;t<sliceBoundaryX.length;t++){let d=1e9;const bx=sliceBoundaryX[t];nbrs.forEach(o=>{const dd=Math.abs(bx-o);if(dd>0.5&&dd<d)d=dd});sliceBandTol[t]=Math.max(14,Math.min(30,d*0.45))}
   el.overlay.setAttribute('width',wr.width);el.overlay.setAttribute('height',wr.height);
   el.overlay.style.width=wr.width+'px';el.overlay.style.height=wr.height+'px';
-  sliceRender();positionTutorial();
+  sliceRender();renderSliceBolds();positionTutorial();
+}
+function slicePreviewParts(){
+  if(!sliceUnit)return [];
+  const offs=clusterOffsets(sliceClusters), chars=[...sliceUnit.text], cuts=[0];
+  Object.keys(sliceCuts).forEach(k=>{const b=+k;if(sliceCuts[b]&&offs[b+1]!=null&&offs[b+1]>0&&offs[b+1]<chars.length)cuts.push(offs[b+1])});
+  cuts.push(chars.length);cuts.sort((a,b)=>a-b);
+  const parts=[];
+  for(let i=0;i<cuts.length-1;i++){if(cuts[i]!==cuts[i+1])parts.push({off:cuts[i],text:chars.slice(cuts[i],cuts[i+1]).join('')})}
+  return parts;
+}
+function slicePartIsBold(off){
+  const k=String(off);
+  if(hasOwn(slicePartBold,k))return !!slicePartBold[k];
+  if(sliceUnit){const pk=partBoldKey(sliceUnit,off);if(hasOwn(partBold,pk))return !!partBold[pk];return isBold(sliceUnit)}
+  return false;
+}
+function renderSliceBolds(){
+  const row=$('sliceBolds');if(!row)return;
+  const parts=slicePreviewParts();
+  row.textContent='';
+  if(!sliceUnit||parts.length<2){row.hidden=true;return}
+  row.hidden=false;
+  parts.forEach(p=>{
+    const btn=document.createElement('button');btn.type='button';btn.className='sbb'+(slicePartIsBold(p.off)?' on':'');
+    btn.textContent='B '+p.text;
+    btn.title='הדגשה לחלק';btn.setAttribute('aria-label','הדגשה לחלק '+p.text);
+    btn.addEventListener('click',ev=>{ev.stopPropagation();ev.preventDefault();slicePartBold[String(p.off)]=!slicePartIsBold(p.off);renderSliceBolds()});
+    row.appendChild(btn);
+  });
 }
 function mkSvg(tag,attrs){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e}
 function sliceRender(){
@@ -1332,6 +1415,8 @@ function openSlicePanel(u){
   sliceUnit=u;
   const packed=cutsFromUnit(u);
   sliceClusters=packed.clusters;sliceCuts=packed.cuts;sliceCutHistory=[];slicePanX=0;sliceVariant='lines';
+  slicePartBold={};
+  Object.keys(partBold).forEach(k=>{const pref=String(u.id)+':';if(k.startsWith(pref))slicePartBold[k.slice(pref.length)]=!!partBold[k]});
   sliceOpen=true;pts=[];sliceParticles=[];sliceRings=[];slicing=false;
   const sw=$('sliceWord');if(sw){sw.classList.toggle('bold',!!isBold(u));sw.style.fontWeight=''}
   const pane=$('slicePane'),bd=$('sliceBackdrop');pane.classList.add('show');pane.setAttribute('aria-hidden','false');if(bd){bd.classList.add('show');bd.setAttribute('aria-hidden','false')}
@@ -1347,7 +1432,8 @@ function openSlicePanel(u){
 function onSliceResize(){if(!sliceOpen)return;resizeSliceFx();sliceMeasure()}
 function closeSlicePanel(){
   if(!sliceOpen)return;
-  sliceOpen=false;slicing=false;sliceUnit=null;pts=[];
+  sliceOpen=false;slicing=false;sliceUnit=null;pts=[];slicePartBold={};
+  const sb=$('sliceBolds');if(sb){sb.hidden=true;sb.textContent=''}
   dismissTutorial();
   const pane=$('slicePane'),bd=$('sliceBackdrop');pane.classList.remove('show');pane.setAttribute('aria-hidden','true');if(bd){bd.classList.remove('show');bd.setAttribute('aria-hidden','true')}
   const ww=document.querySelector('#slicePane .wordwrap');if(ww)ww.style.transform='';
@@ -1361,7 +1447,24 @@ function confirmSlice(){
   const u=sliceUnit,offs=clusterOffsets(sliceClusters),pref=String(u.id)+':';
   const next=[];
   Object.keys(sliceCuts).forEach(k=>{const b=+k;if(sliceCuts[b]&&offs[b+1]!=null&&offs[b+1]>0)next.push(pref+offs[b+1])});
-  change(()=>{wordCuts=wordCuts.filter(c=>!c.startsWith(pref)).concat(next)},'cuts');
+  change(()=>{
+    wordCuts=wordCuts.filter(c=>!c.startsWith(pref)).concat(next);
+    dropEffectFor(u);
+    prunePartBold(u);
+    const keep=new Set(partTimes(u).map(p=>partBoldKey(u,p.off)));
+    Object.keys(partBold).forEach(k=>{if(k.startsWith(pref)&&!keep.has(k))delete partBold[k]});
+    if(next.length){
+      partTimes(u).forEach(p=>{
+        const sk=String(p.off);
+        if(hasOwn(slicePartBold,sk)){
+          const want=!!slicePartBold[sk];
+          const k=partBoldKey(u,p.off);
+          if(want===isBold(u))delete partBold[k];else partBold[k]=want;
+        }
+      });
+    }else clearPartBoldFor(u);
+    dirtyFlags.partBold=true;
+  },'cuts');
   closeSlicePanel();
 }
 $('sliceOk').onclick=e=>{e.stopPropagation();confirmSlice()};
