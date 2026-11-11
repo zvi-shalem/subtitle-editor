@@ -153,11 +153,11 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .slice-bolds .sbb.on{background:#0d9488;color:#fff;font-weight:800}
 .tok-fx,.tok .fx{display:inline-block;transform-origin:center center}
 .tok .fx-shake{animation:none}
-.tok.on .tok-fx.fx-shake{animation:fx-shake .32s ease-in-out infinite}
+.tok.on .tok-fx.fx-shake{animation:fx-shake .18s linear infinite}
 @keyframes fx-shake{
-  0%,100%{transform:translate(0,0) rotate(0deg)}
-  25%{transform:translate(-2.5px,1.5px) rotate(-2deg)}
-  75%{transform:translate(2.5px,-1.5px) rotate(2deg)}
+  0%,50%,100%{transform:translateX(0)}
+  25%{transform:translateX(-3px)}
+  75%{transform:translateX(3px)}
 }
 .tok .fx-whisper{opacity:.55;scale:.82;transform-origin:center}
 .tok .fx-pop{animation:none}
