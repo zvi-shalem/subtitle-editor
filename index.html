@@ -93,6 +93,10 @@ input[type=range]{flex:1;min-width:40px;direction:ltr;accent-color:var(--acc2);h
 .vwrap{position:fixed;left:8px;top:calc(var(--header-h) + 8px);z-index:10;height:132px;aspect-ratio:480/854;background:#000;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px #000a;display:none}
 .vwrap.show{display:block}
 .vwrap.big{height:min(50vh,420px)}
+.vwrap.land{height:auto;width:180px;aspect-ratio:var(--var-ar,16/9)}
+.vwrap.land.big{height:auto;width:calc(100vw - 16px);max-width:760px}
+.vwrap.land .sub{font-size:8px}
+.vwrap.land.big .sub{font-size:clamp(13px,3.4vw,24px)}
 video{width:100%;height:100%;display:block;object-fit:contain}
 .sub{position:absolute;left:2px;right:2px;bottom:10%;text-align:center;font-size:12px;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;direction:rtl;line-height:1.35;font-weight:400}
 .vwrap.big .sub{font-size:20px}
@@ -1184,7 +1188,7 @@ function boomLoop(now){
 (function loop(){if(!v.paused)tick();requestAnimationFrame(loop)})();
 v.addEventListener('timeupdate',()=>tick());
 v.addEventListener('seeked',()=>tick());
-v.addEventListener('loadedmetadata',()=>{loadRate();tick(true);layoutChrome()});
+v.addEventListener('loadedmetadata',()=>{const vw=document.getElementById('vwrap');if(v.videoWidth&&v.videoHeight){vw.style.setProperty('--var-ar',v.videoWidth+'/'+v.videoHeight);vw.classList.toggle('land',v.videoWidth>v.videoHeight)}loadRate();tick(true);layoutChrome()});
 window.addEventListener('resize',layoutChrome);
 
 function silenceTextOf(key){const t=silenceText[String(key)];return (typeof t==='string')?t.trim():''}
