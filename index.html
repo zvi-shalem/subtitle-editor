@@ -287,7 +287,9 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 <script>
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6ZmpkZHp2bnh1YnRtaWhieW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NzY4NjYsImV4cCI6MjEwNzA1Mjg2Nn0.mfGd4WLNiNh-mhpgCX2MjmzxOQIfWESS8CUGjYbB8FQ';
-const PROJECT=new URLSearchParams(location.search).get('project')||'amitai-part';
+// Old project links forward automatically to the newest project, so a saved home-screen link always opens the current one.
+const PROJECT_REDIRECTS={'amitai-part':'amitai-trim'};
+const PROJECT=(()=>{const q=new URLSearchParams(location.search);let p=q.get('project')||'amitai-part';const asked=p;let n=0;while(PROJECT_REDIRECTS[p]&&n++<10)p=PROJECT_REDIRECTS[p];if(p!==asked){q.set('project',p);try{history.replaceState(null,'',location.pathname+'?'+q.toString()+location.hash)}catch(e){}}return p})();
 const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
 const RATES=[1,1.5,2,2.5];
 const $=id=>document.getElementById(id);
@@ -451,6 +453,7 @@ async function load(){
     const rows=await r.json();
     if(!rows.length){linesEl.innerHTML='<div class="err-box">הפרויקט "'+PROJECT.replace(/[<>&"]/g,'')+'" לא נמצא</div>';setStatus('לא נמצא',true);return}
     const row=rows[0], data=row.data||{}, st=row.state||{};
+    if(data.redirect_to&&data.redirect_to!==PROJECT){const q=new URLSearchParams(location.search);q.set('project',data.redirect_to);location.replace(location.pathname+'?'+q.toString());return}
     words=data.words||[];
     songTitle=data.song_title||data.title||'';
     performerName=data.performer_name||'';
