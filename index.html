@@ -101,17 +101,16 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .sub .tokword .tok-sizer{font-size:1em}
 .sub .tok.slot-b .tok-sizer{font-weight:800;font-size:1.25em}
 .sub .tokword .tok.slot-b .tok-sizer{font-weight:800;font-size:1em}
-.sub .tok-live{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transform-origin:center center;white-space:nowrap;font-weight:400;transition:transform .16s ease,color .16s ease}
-.sub .tok.on .tok-live{color:var(--acc);transform:translate(-50%,-50%) scale(1.1)}
+.sub .tok-live{position:absolute;left:50%;top:50%;translate:-50% -50%;scale:1;transform:none;transform-origin:center center;white-space:nowrap;font-weight:400;transition:scale .16s ease,color .16s ease}
+.sub .tok.on .tok-live{color:var(--acc);scale:1.1}
 .sub .tok.b .tok-live{font-weight:800}
-.sub .tok.on.b .tok-live{font-weight:800;color:var(--acc);transform:translate(-50%,-50%) scale(1.25)}
-/* pack cut-word parts against the seam so reserved bold width doesn't open a gap */
-.sub .tokword .tok:first-child .tok-live{left:auto;right:auto;inset-inline-start:auto;inset-inline-end:0;transform:translateY(-50%);transform-origin:inline-end center}
-.sub .tokword .tok:first-child.on .tok-live{transform:translateY(-50%) scale(1.1)}
-.sub .tokword .tok:first-child.on.b .tok-live{transform:translateY(-50%) scale(1.25)}
-.sub .tokword .tok:last-child:not(:first-child) .tok-live{left:auto;right:auto;inset-inline-start:0;inset-inline-end:auto;transform:translateY(-50%);transform-origin:inline-start center}
-.sub .tokword .tok:last-child:not(:first-child).on .tok-live{transform:translateY(-50%) scale(1.1)}
-.sub .tokword .tok:last-child:not(:first-child).on.b .tok-live{transform:translateY(-50%) scale(1.25)}
+.sub .tok.on.b .tok-live{font-weight:800;color:var(--acc);scale:1.25}
+.sub .tokword .tok:first-child .tok-live{left:auto;right:auto;inset-inline-start:auto;inset-inline-end:0;translate:0 -50%;transform-origin:inline-end center}
+.sub .tokword .tok:first-child.on .tok-live{scale:1.1}
+.sub .tokword .tok:first-child.on.b .tok-live{scale:1.25}
+.sub .tokword .tok:last-child:not(:first-child) .tok-live{left:auto;right:auto;inset-inline-start:0;inset-inline-end:auto;translate:0 -50%;transform-origin:inline-start center}
+.sub .tokword .tok:last-child:not(:first-child).on .tok-live{scale:1.1}
+.sub .tokword .tok:last-child:not(:first-child).on.b .tok-live{scale:1.25}
 .vbig{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:14px;padding:0}
 #vpause{position:fixed;z-index:11;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:16px;line-height:1;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px #0006;cursor:pointer}
 #vpause.show{display:inline-flex}
@@ -143,37 +142,30 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .sheet .sactions{display:flex;gap:8px;justify-content:flex-start}
 .sheet .sactions .ok{background:var(--acc);color:#111;font:inherit;font-weight:800;border:0;border-radius:8px;padding:8px 14px}
 .sheet .sactions .cancel{background:#262b35;color:var(--fg);font:inherit;border:0;border-radius:8px;padding:8px 14px}
-.tok .fx{display:inline-block}
+.tok-fx,.tok .fx{display:inline-block;transform-origin:center center}
 .tok .fx-shake{animation:none}
-.tok.on .fx-shake{animation:fx-shake .32s ease-in-out infinite}
-@keyframes fx-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px) rotate(-2deg)}75%{transform:translateX(2px) rotate(2deg)}}
-.tok .fx-whisper{opacity:.55;transform:scale(.82);transform-origin:center}
-.tok .fx-pop{animation:none}
-.tok.on .tok-live.fx-pop,
-.sub .tokword .tok.on .tok-live.fx-pop,
-.sub .tokword .tok:first-child.on .tok-live.fx-pop,
-.sub .tokword .tok:first-child.on.b .tok-live.fx-pop,
-.sub .tokword .tok:last-child.on .tok-live.fx-pop,
-.sub .tokword .tok:last-child:not(:first-child).on .tok-live.fx-pop,
-.sub .tokword .tok:last-child:not(:first-child).on.b .tok-live.fx-pop{animation:fx-pop .62s cubic-bezier(.12,.9,.22,1) both;transition:none}
-@keyframes fx-pop{
-  0%{transform:translate(-50%,-50%) scale(.12) rotate(-14deg);filter:brightness(8) saturate(2.6) contrast(1.5);text-shadow:0 0 8px #fff,0 0 22px #ffe566,0 0 40px #ff4d00}
-  7%{transform:translate(-50%,-50%) scale(2.45) rotate(10deg);filter:brightness(9) saturate(2.2);text-shadow:0 0 16px #fff,0 0 36px #ffcc33,0 0 70px #ff2a00}
-  16%{transform:translate(-50%,-50%) scale(.72) rotate(-7deg);filter:brightness(2.4) saturate(1.8);text-shadow:0 0 10px #ff8a00,0 0 24px #ff4d00}
-  30%{transform:translate(-50%,-50%) scale(1.35) rotate(4deg);filter:brightness(1.6);text-shadow:0 0 8px #ffcc33}
-  55%{transform:translate(-50%,-50%) scale(.96) rotate(-1deg);filter:brightness(1.15);text-shadow:none}
-  100%{transform:translate(-50%,-50%) scale(1) rotate(0);filter:none;text-shadow:none}
+.tok.on .tok-fx.fx-shake{animation:fx-shake .32s ease-in-out infinite}
+@keyframes fx-shake{
+  0%,100%{transform:translate(0,0) rotate(0deg)}
+  25%{transform:translate(-2.5px,1.5px) rotate(-2deg)}
+  75%{transform:translate(2.5px,-1.5px) rotate(2deg)}
 }
-.vwrap.exploding{animation:vwrap-boom .38s linear}
+.tok .fx-whisper{opacity:.55;scale:.82;transform-origin:center}
+.tok .fx-pop{animation:none}
+.tok.on .tok-fx.fx-pop{animation:fx-pop .45s cubic-bezier(.15,.85,.3,1) both}
+@keyframes fx-pop{
+  0%{transform:scale(.72);filter:brightness(1.3);text-shadow:0 0 6px rgba(255,220,80,.6)}
+  28%{transform:scale(1.18);filter:brightness(1.55);text-shadow:0 0 10px rgba(255,204,51,.75)}
+  70%{transform:scale(.98);filter:brightness(1.08);text-shadow:none}
+  100%{transform:scale(1);filter:none;text-shadow:none}
+}
+.vwrap.exploding{animation:vwrap-boom .36s ease-out}
 @keyframes vwrap-boom{
-  0%,100%{transform:translate(0,0) rotate(0)}
-  6%{transform:translate(-9px,6px) rotate(-1.4deg)}
-  12%{transform:translate(8px,-7px) rotate(1.2deg)}
-  18%{transform:translate(-7px,-5px) rotate(-1deg)}
-  25%{transform:translate(7px,4px) rotate(.9deg)}
-  33%{transform:translate(-4px,5px) rotate(-.6deg)}
-  45%{transform:translate(3px,-3px) rotate(.4deg)}
-  62%{transform:translate(-2px,1px) rotate(-.15deg)}
+  0%,100%{transform:translate(0,0)}
+  18%{transform:translate(-3px,2px)}
+  36%{transform:translate(3px,-2px)}
+  54%{transform:translate(-2px,-1px)}
+  72%{transform:translate(1px,1px)}
 }
 #subFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
 .tok .fx-strike{text-decoration:line-through;text-decoration-thickness:2px}
@@ -191,9 +183,9 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .sheet .scut{font:inherit;width:40px;height:40px;padding:0;border:0;border-radius:10px;background:#262b35;color:var(--fg);font-size:18px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
 .sheet .scut:active{background:var(--acc);color:#111}
 
-/* scissors mode: whole words as raised tap targets, no letter gaps */
-body.cutmode .w{background:#20242d;border:1.5px solid #7b8494;border-radius:10px;padding:5px 8px;margin:2px 3px;box-shadow:0 3px 10px #0007}
-body.cutmode .w.cutword{padding:5px 8px;margin:2px 3px;box-shadow:0 3px 10px #0007}
+/* scissors mode: same size and layout as normal; highlight only visually */
+body.cutmode .w{background:#20242d;outline:1.5px solid #8b93a3;outline-offset:0;box-shadow:0 0 10px #0006}
+body.cutmode .w.cutword{outline-color:#9aa3b2}
 body.cutmode .gap,
 body.cutmode .x,
 body.cutmode .bb,
@@ -201,7 +193,7 @@ body.cutmode .nbtn,
 body.cutmode .sbtn,
 body.cutmode .sib-edit,
 body.cutmode .fx-badge,
-body.cutmode .num{opacity:.28;pointer-events:none;transform:scale(.92);transform-origin:center}
+body.cutmode .num{opacity:.28;pointer-events:none}
 
 /* --- silence + on the visual left of each line card --- */
 .line{padding:5px 6px 5px 30px}
@@ -1037,7 +1029,7 @@ function renderSub(u,pt,t){
       const started=t+0.02>=it.pt.s;
       const boldish=isBold(it.u);
       const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'');
-      html+='<span class="'+cls+'"><span class="tok-sizer" aria-hidden="true">'+esc(it.pt.text)+'</span><span class="tok-live'+(fxCls||'')+'">'+inner+'</span></span>';
+      html+='<span class="'+cls+'"><span class="tok-sizer" aria-hidden="true">'+esc(it.pt.text)+'</span><span class="tok-live"><span class="tok-fx'+(fxCls||'')+'">'+inner+'</span></span></span>';
     });
     if(multi)html+='</span>';
   });
@@ -1069,31 +1061,22 @@ function startPopBoom(tok){
   resizeSubFx();
   const vr=vw.getBoundingClientRect(),tr=tok.getBoundingClientRect();
   const cx=tr.left+tr.width/2-vr.left, cy=tr.top+tr.height/2-vr.top;
-  const colors=['#ffffff','#fff7c2','#ffe566','#ffcc33','#ffb000','#ff8a00','#ff4d00','#ff2a00','#ff6a3a','#ffd27a'];
+  const colors=['#fff7c2','#ffe566','#ffcc33','#ffd27a'];
   boomParts=[];boomRings=[];
-  const n=120;
+  const n=6;
   for(let i=0;i<n;i++){
-    const ang=Math.random()*Math.PI*2, sp=10+Math.random()*28;
-    const hot=Math.random();
+    const ang=Math.random()*Math.PI*2, sp=2.2+Math.random()*3.4;
     boomParts.push({
-      x:cx+(Math.random()-0.5)*8,y:cy+(Math.random()-0.5)*8,
-      vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-Math.random()*8,
-      rot:(Math.random()-0.5)*Math.PI,vr:(Math.random()-0.5)*1.6,
-      w:4+Math.random()*22,h:2+Math.random()*11,
-      life:1,decay:0.008+Math.random()*0.018,
+      x:cx+(Math.random()-0.5)*4,y:cy+(Math.random()-0.5)*3,
+      vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-0.8,
+      rot:0,vr:(Math.random()-0.5)*0.25,
+      w:2+Math.random()*3,h:2+Math.random()*2,
+      life:1,decay:0.045+Math.random()*0.03,
       color:colors[(Math.random()*colors.length)|0],
-      kind:hot>0.72?'spark':(hot>0.4?'shard':'ember'),
-      g:hot>0.72?0.18:0.42
+      kind:'ember',g:0.08
     });
   }
-  for(let k=0;k<14;k++){
-    const ang=Math.random()*Math.PI*2, sp=16+Math.random()*24;
-    boomParts.push({x:cx,y:cy,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp-4,rot:Math.random()*6,vr:(Math.random()-0.5)*2.2,w:10+Math.random()*26,h:5+Math.random()*14,life:1,decay:0.01+Math.random()*0.012,color:colors[(Math.random()*colors.length)|0],kind:'shard',g:0.38});
-  }
-  boomRings.push({x:cx,y:cy,r:6,vr:9,life:1,w:9,color:'rgba(255,255,255,0.95)'});
-  boomRings.push({x:cx,y:cy,r:2,vr:14,life:1,w:6,color:'rgba(255,80,0,0.9)'});
-  boomRings.push({x:cx,y:cy,r:4,vr:6,life:1,w:3,color:'rgba(255,200,60,0.7)'});
-  boomFlash=1;
+  boomFlash=0.45;
   vw.classList.remove('exploding');void vw.offsetWidth;vw.classList.add('exploding');
   const done=()=>{vw.classList.remove('exploding');vw.removeEventListener('animationend',done)};
   vw.addEventListener('animationend',done);
@@ -1109,17 +1092,14 @@ function boomLoop(now){
   const r=vw.getBoundingClientRect();
   ctx.clearRect(0,0,r.width,r.height);
   if(boomFlash>0){
-    const g=ctx.createRadialGradient(r.width/2,r.height/2,4,r.width/2,r.height/2,Math.max(r.width,r.height)*0.7);
-    // flash centered on last ring if any
-    let fx=r.width/2,fy=r.height*0.8;
-    if(boomRings[0]){fx=boomRings[0].x;fy=boomRings[0].y}
-    const grd=ctx.createRadialGradient(fx,fy,2,fx,fy,Math.max(r.width,r.height)*0.65);
-    grd.addColorStop(0,'rgba(255,255,230,'+(boomFlash*0.95)+')');
-    grd.addColorStop(0.18,'rgba(255,180,40,'+(boomFlash*0.55)+')');
-    grd.addColorStop(0.45,'rgba(255,40,0,'+(boomFlash*0.22)+')');
-    grd.addColorStop(1,'rgba(255,0,0,0)');
+    let fx=r.width/2,fy=r.height*0.82;
+    if(boomParts[0]){fx=boomParts[0].x;fy=boomParts[0].y}
+    const grd=ctx.createRadialGradient(fx,fy,2,fx,fy,56);
+    grd.addColorStop(0,'rgba(255,245,200,'+(boomFlash*0.5)+')');
+    grd.addColorStop(0.5,'rgba(255,204,51,'+(boomFlash*0.18)+')');
+    grd.addColorStop(1,'rgba(255,180,40,0)');
     ctx.fillStyle=grd;ctx.fillRect(0,0,r.width,r.height);
-    boomFlash=Math.max(0,boomFlash-0.07*dt);
+    boomFlash=Math.max(0,boomFlash-0.14*dt);
   }
   for(let i=boomRings.length-1;i>=0;i--){
     const rg=boomRings[i];rg.r+=rg.vr*dt;rg.life-=0.035*dt;rg.vr*=0.98;
