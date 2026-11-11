@@ -126,7 +126,8 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .sheet .sactions .ok{background:var(--acc);color:#111;font:inherit;font-weight:800;border:0;border-radius:8px;padding:8px 14px}
 .sheet .sactions .cancel{background:#262b35;color:var(--fg);font:inherit;border:0;border-radius:8px;padding:8px 14px}
 .tok .fx{display:inline-block}
-.tok .fx-shake{animation:fx-shake .32s ease-in-out infinite}
+.tok .fx-shake{animation:none}
+.tok.on .fx-shake{animation:fx-shake .32s ease-in-out infinite}
 @keyframes fx-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px) rotate(-2deg)}75%{transform:translateX(2px) rotate(2deg)}}
 .tok .fx-whisper{opacity:.55;transform:scale(.82);transform-origin:center}
 .tok .fx-pop{animation:fx-pop .5s ease-out}
@@ -140,6 +141,23 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .tok .hid{opacity:.4}
 .tok .hid-hi{opacity:1;color:#7ecbff}
 .tok.on .hid-hi{color:#9ad8ff}
+.tok .fx-typewriter{position:relative}
+.tok .fx-typewriter .tw-ghost{visibility:hidden}
+.tok .fx-typewriter .tw-live{position:absolute;inset-inline-start:0;top:0;bottom:0;white-space:nowrap}
+.sheet .scut{font:inherit;width:40px;height:40px;padding:0;border:0;border-radius:10px;background:#262b35;color:var(--fg);font-size:18px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.sheet .scut:active{background:var(--acc);color:#111}
+
+/* scissors mode: whole words as raised tap targets, no letter gaps */
+body.cutmode .w{background:#20242d;border:1.5px solid #7b8494;border-radius:10px;padding:5px 8px;margin:2px 3px;box-shadow:0 3px 10px #0007}
+body.cutmode .w.cutword{padding:5px 8px;margin:2px 3px;box-shadow:0 3px 10px #0007}
+body.cutmode .gap,
+body.cutmode .x,
+body.cutmode .bb,
+body.cutmode .nbtn,
+body.cutmode .sbtn,
+body.cutmode .sib-edit,
+body.cutmode .fx-badge,
+body.cutmode .num{opacity:.28;pointer-events:none;transform:scale(.92);transform-origin:center}
 
 /* --- silence + on the visual left of each line card --- */
 .line{padding:5px 6px 5px 30px}
@@ -432,11 +450,15 @@ function highlightLetters(text, which){
   }
   return chars.map((ch,i)=>'<span class="'+(marks[i]?'hid-hi':'hid')+'">'+esc(ch)+'</span>').join('');
 }
-function typewriterHtml(text,u,t,on){
-  if(!on)return esc(text);
-  const chars=[...text], dur=Math.max(0.05,(u.e-u.s)||0.3);
-  const n=Math.max(0,Math.min(chars.length, Math.ceil(((t-u.s)/dur)*chars.length)));
-  return esc(chars.slice(0,n).join(''));
+function typewriterHtml(text,span,t){
+  const chars=[...text];
+  const s0=span&&span.s!=null?span.s:0, e0=span&&span.e!=null?span.e:s0;
+  const dur=Math.max(0.05,(e0-s0)||0.3);
+  let n;
+  if(t+0.02<s0) n=0;
+  else if(t>=e0-1e-6) n=chars.length;
+  else n=Math.max(0,Math.min(chars.length, Math.ceil(((t-s0)/dur)*chars.length)));
+  return '<span class="tw-ghost" aria-hidden="true">'+esc(text)+'</span><span class="tw-live">'+esc(chars.slice(0,n).join(''))+'</span>';
 }
 function openNoteMenu(btn,key){
   closeNoteMenu();
@@ -477,6 +499,13 @@ function openWordEdit(unit){
   const syncWarn=()=>{const empty=inp.value==='';inp.classList.toggle('warn',empty);inp.title=empty?'טקסט ריק יסתיר את המילה':'טקסט המילה'};
   syncWarn();inp.addEventListener('input',syncWarn);
   row.appendChild(inp);
+  const canCut=!unit.hidden && !unit.silence && unit.text && [...unit.text].length>=2;
+  if(canCut){
+    const cutBtn=document.createElement('button');cutBtn.type='button';cutBtn.className='scut';cutBtn.textContent='✂️';
+    cutBtn.title='גזירה';cutBtn.setAttribute('aria-label','גזירה');
+    cutBtn.onclick=e=>{e.stopPropagation();closeWordEdit();openSlicePanel(unit)};
+    row.appendChild(cutBtn);
+  }
   const chips=document.createElement('div');chips.className='chips';
   const fieldWrap=document.createElement('div');
   const fieldLab=document.createElement('div');fieldLab.className='slabel';
@@ -549,15 +578,7 @@ function appendPart(w,u,pt){
   const part=document.createElement('span');part.className='part'+(isBold(u)?' marked':'');
   part.dataset.id=String(u.id);part.dataset.off=String(pt.off);
   partEls[u.id+':'+pt.off]=part;
-  if(cutMode){
-    const chars=[...pt.text];
-    chars.forEach((ch,ci)=>{
-      if(ci>0){const ac=document.createElement('button');ac.className='addcut';ac.dataset.act='addcut';ac.dataset.id=String(u.id);ac.dataset.off=String(pt.off+ci);ac.title='הוספת חיתוך';ac.setAttribute('aria-label','הוספת חיתוך');part.appendChild(ac)}
-      const b=document.createElement('button');b.className='ch';b.textContent=ch;b.dataset.act='seek';b.dataset.id=String(u.id);b.dataset.off=String(pt.off);part.appendChild(b);
-    });
-  }else{
-    const b=document.createElement('button');b.className='part-btn';b.textContent=pt.text;b.dataset.act='seek';b.dataset.id=String(u.id);b.dataset.off=String(pt.off);part.appendChild(b);
-  }
+  const b=document.createElement('button');b.className='part-btn';b.textContent=pt.text;b.dataset.act='seek';b.dataset.id=String(u.id);b.dataset.off=String(pt.off);part.appendChild(b);
   w.appendChild(part);
 }
 function makeWordShell(u){
@@ -590,16 +611,19 @@ function render(keep){
   raw.lines.forEach((ln,n)=>{
     const line=document.createElement('div');line.className='line';line.dataset.key=String(ln.key);line.dataset.first=String(ln.key);
     const num=document.createElement('span');num.className='num';num.textContent=n+1;line.appendChild(num);
-    if(ln.end && n<pack.lines.length-1){
-      const x=document.createElement('button');x.className='x';x.textContent='×';x.dataset.act='merge';x.dataset.kind=ln.end.type;x.dataset.key=String(ln.end.key);
-      x.title='חיבור לשורה הבאה';x.setAttribute('aria-label','חיבור לשורה הבאה');line.appendChild(x);
-    }
     const nb=document.createElement('button');nb.className='nbtn';
     const note=notes[String(ln.key)];
     if(note&&note.type){nb.classList.add(note.type);const dot=document.createElement('span');dot.className='dot';nb.appendChild(dot)}
     nb.appendChild(document.createTextNode('💬'));
     const nt=noteTitle(note);nb.title=nt;nb.setAttribute('aria-label',nt);nb.dataset.act='note';nb.dataset.key=String(ln.key);
     line.appendChild(nb);
+    if(n>0){
+      const prev=raw.lines[n-1];
+      if(prev&&prev.end){
+        const x=document.createElement('button');x.className='x';x.textContent='×';x.dataset.act='merge';x.dataset.kind=prev.end.type;x.dataset.key=String(prev.end.key);
+        x.title='חיבור לשורה הקודמת';x.setAttribute('aria-label','חיבור לשורה הקודמת');line.appendChild(x);
+      }
+    }
     const silOn=silences.has(String(ln.key));
 
     let curW=null,curId=null,prevU=null;
@@ -905,8 +929,8 @@ function tick(force){
       if(follow&&!v.paused&&we){const r=we.getBoundingClientRect(),bottom=window.innerHeight-$('player').offsetHeight;if(r.top<60||r.bottom>bottom-10)we.scrollIntoView({block:'center',behavior:'smooth'})}
     }
     updateSung(t);
-    renderSub(u,pt,t);
   }
+  renderSub(u,pt,t);
 }
 function lineOf(u,pt){
   for(const ln of linesCache){
@@ -914,10 +938,13 @@ function lineOf(u,pt){
   }
   return null;
 }
+let lastSubHtml='';
 function renderSub(u,pt,t){
-  const sub=$('sub');if(!u||u.hidden){sub.textContent='';return}
-  const ln=lineOf(u,pt);if(!ln){sub.textContent='';return}
-  if(t>(ln.items[ln.items.length-1].pt.e)+0.8){sub.textContent='';return}
+  const sub=$('sub');
+  const clearSub=()=>{if(lastSubHtml!==''){sub.textContent='';lastSubHtml=''}};
+  if(!u||u.hidden){clearSub();return}
+  const ln=lineOf(u,pt);if(!ln){clearSub();return}
+  if(t>(ln.items[ln.items.length-1].pt.e)+0.8){clearSub();return}
   let html='';
   ln.items.forEach((it,i)=>{
     if(it.u.hidden||!it.pt.text)return;
@@ -928,7 +955,7 @@ function renderSub(u,pt,t){
     const typ=fx&&fx.type&&fx.type!=='none'?fx.type:'';
     let inner=esc(it.pt.text);
     if(typ==='hidden') inner=highlightLetters(it.pt.text, fx.text2||'');
-    else if(typ==='typewriter') inner=typewriterHtml(it.pt.text,it.u,t,on);
+    else if(typ==='typewriter') inner=typewriterHtml(it.pt.text,it.pt,t);
     else if(typ==='morph' && fx.text2){
       if(on) inner='<span class="from">'+esc(it.pt.text)+'</span><span class="to">'+esc(fx.text2)+'</span>';
       else inner=esc(it.pt.text);
@@ -939,7 +966,8 @@ function renderSub(u,pt,t){
     const started=t+0.02>=it.pt.s;
     html+='<span class="tok'+(on?' on':'')+(isBold(it.u)&&started?' b':'')+'"><span class="'+(fxCls||'fx')+'">'+inner+'</span></span>';
   });
-  sub.innerHTML=html;
+  if(html===lastSubHtml)return;
+  lastSubHtml=html;sub.innerHTML=html;
 }
 (function loop(){if(!v.paused)tick();requestAnimationFrame(loop)})();
 v.addEventListener('timeupdate',()=>tick());
