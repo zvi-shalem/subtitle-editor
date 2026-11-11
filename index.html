@@ -36,10 +36,15 @@ header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow
 .line.cur{outline:2px solid var(--acc2)}
 .num{font-size:11px;color:var(--mut);min-width:22px;text-align:center;align-self:flex-start;padding-top:8px}
 .w{display:inline-flex;align-items:center;position:relative}
-.wt,.part-btn,.ch{font:inherit;font-size:21px;color:var(--fg);background:none;border:0;padding:4px 3px;border-radius:6px;line-height:1.25;display:inline-block;font-weight:400;transform-origin:center center;transition:transform .16s ease}
-.w.now .wt,.part.now .part-btn,.part.now .ch{transform:scale(1.1);background:var(--acc2);color:#fff}
-.w.now.marked .wt,.part.now.marked .part-btn,.part.now.marked .ch{transform:scale(1.25);font-weight:800}
-.w.sung.marked .wt,.part.sung.marked .part-btn,.part.sung.marked .ch{font-weight:800}
+.wt,.part-btn,.ch{font:inherit;font-size:21px;color:var(--fg);background:none;border:0;padding:4px 3px;border-radius:6px;line-height:1.25;display:inline-block;font-weight:400;transform-origin:center center;transition:transform .16s ease,font-weight .16s ease,color .16s ease,background .16s ease}
+.part.now .part-btn,.part.now .ch{transform:scale(1.1);background:var(--acc2);color:#fff}
+.part.now.marked .part-btn,.part.now.marked .ch{transform:scale(1.25);font-weight:800}
+.part.sung.marked .part-btn,.part.sung.marked .ch{font-weight:800}
+.part{display:inline-flex;align-items:center;justify-content:center;position:relative;vertical-align:middle}
+.part-sizer{visibility:hidden;pointer-events:none;font:inherit;font-size:21px;padding:4px 3px;line-height:1.25;font-weight:400;white-space:nowrap;display:inline-block}
+.w.cutword:not(.marked) .part-sizer{font-size:calc(21px * 1.1);padding:calc(4px * 1.1) calc(3px * 1.1)}
+.w.marked .part-sizer{font-weight:800;font-size:calc(21px * 1.25);padding:calc(4px * 1.25) calc(3px * 1.25)}
+.part.reserved .part-btn{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;margin:0}
 .w.edited{box-shadow:inset 0 -2px 0 rgba(255,204,51,.7)}
 .w.hidden-w{opacity:.55}
 .w.hidden-w .ghost{font:inherit;font-size:14px;color:var(--mut);padding:4px 6px;background:none;border:0}
@@ -49,7 +54,7 @@ header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow
 .gap:active,.gap:hover{background:var(--acc2);color:#fff;border-color:var(--acc2)}
 .x{font:inherit;min-width:34px;height:34px;margin:0 4px 0 2px;border-radius:17px;border:1.5px solid #e05555;background:#4a1a1f;color:#ffb3b3;font-size:18px;font-weight:800;line-height:1;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;align-self:center}
 .x:active{background:#e05555;color:#fff}
-.w.cutword{border:1.5px solid #6b7384;border-radius:8px;padding:1px 3px;margin:1px 2px;align-items:center}
+.w.cutword{border:1.5px solid #6b7384;border-radius:8px;padding:1px 3px;margin:1px 2px;align-items:center;flex-wrap:nowrap;white-space:nowrap}
 .w.cutword.cont-end{border-inline-end-style:dashed;border-start-end-radius:2px;border-end-end-radius:2px}
 .w.cutword.cont-start{border-inline-start-style:dashed;border-start-start-radius:2px;border-end-start-radius:2px}
 .part{display:inline-flex;align-items:center}
@@ -90,10 +95,23 @@ input[type=range]{flex:1;min-width:40px;direction:ltr;accent-color:var(--acc2);h
 video{width:100%;height:100%;display:block;object-fit:contain}
 .sub{position:absolute;left:2px;right:2px;bottom:10%;text-align:center;font-size:12px;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;direction:rtl;line-height:1.35;font-weight:400}
 .vwrap.big .sub{font-size:20px}
-.sub .tok{display:inline-block;transform-origin:center center;transition:transform .16s ease;font-weight:400}
-.sub .tok.on{color:var(--acc);transform:scale(1.1)}
-.sub .tok.b{font-weight:800}
-.sub .tok.on.b{font-weight:800;transform:scale(1.25)}
+.sub .tokword{display:inline-block;white-space:nowrap;vertical-align:baseline;max-width:100%;padding-inline:0.16em}
+.sub .tok{display:inline-block;position:relative;transform-origin:center center;font-weight:400;vertical-align:baseline;transform:none}
+.sub .tok-sizer{visibility:hidden;display:inline-block;white-space:nowrap;font-weight:400;pointer-events:none;line-height:1}
+.sub .tokword .tok-sizer{font-size:1em}
+.sub .tok.slot-b .tok-sizer{font-weight:800;font-size:1.25em}
+.sub .tokword .tok.slot-b .tok-sizer{font-weight:800;font-size:1em}
+.sub .tok-live{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transform-origin:center center;white-space:nowrap;font-weight:400;transition:transform .16s ease,color .16s ease}
+.sub .tok.on .tok-live{color:var(--acc);transform:translate(-50%,-50%) scale(1.1)}
+.sub .tok.b .tok-live{font-weight:800}
+.sub .tok.on.b .tok-live{font-weight:800;color:var(--acc);transform:translate(-50%,-50%) scale(1.25)}
+/* pack cut-word parts against the seam so reserved bold width doesn't open a gap */
+.sub .tokword .tok:first-child .tok-live{left:auto;right:auto;inset-inline-start:auto;inset-inline-end:0;transform:translateY(-50%);transform-origin:inline-end center}
+.sub .tokword .tok:first-child.on .tok-live{transform:translateY(-50%) scale(1.1)}
+.sub .tokword .tok:first-child.on.b .tok-live{transform:translateY(-50%) scale(1.25)}
+.sub .tokword .tok:last-child:not(:first-child) .tok-live{left:auto;right:auto;inset-inline-start:0;inset-inline-end:auto;transform:translateY(-50%);transform-origin:inline-start center}
+.sub .tokword .tok:last-child:not(:first-child).on .tok-live{transform:translateY(-50%) scale(1.1)}
+.sub .tokword .tok:last-child:not(:first-child).on.b .tok-live{transform:translateY(-50%) scale(1.25)}
 .vbig{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:14px;padding:0}
 #vpause{position:fixed;z-index:11;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:16px;line-height:1;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px #0006;cursor:pointer}
 #vpause.show{display:inline-flex}
@@ -179,7 +197,8 @@ body.cutmode .num{opacity:.28;pointer-events:none;transform:scale(.92);transform
 #slicePane .prompt{text-align:center;color:#0891b2;font-weight:700;font-size:.95rem;padding:4px 12px 0;flex:0 0 auto;background:#fff}
 #slicePane .wordzone{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0;padding:8px;position:relative;max-width:100vw;width:100%;overflow:hidden;background:#fff}
 #slicePane .wordwrap{position:relative;display:inline-block;background:#fff}
-#sliceWord{font-size:clamp(36px,10vh,72px);font-weight:800;color:#0d9488;white-space:nowrap;line-height:1.3;padding:8px 6px;direction:rtl;background:#fff}
+#sliceWord{font-size:clamp(36px,10vh,72px);font-weight:400;color:#0d9488;white-space:nowrap;line-height:1.3;padding:8px 6px;direction:rtl;background:#fff}
+#sliceWord.bold{font-weight:800}
 #sliceOverlay{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}
 #slicePane .controls{position:relative;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:6px 16px calc(10px + env(safe-area-inset-bottom));flex:0 0 auto;background:#fff;z-index:4}
 #slicePane button.act{font-family:inherit;font-size:1.4rem;font-weight:700;border:none;border-radius:16px;padding:10px 22px;color:#fff;background:linear-gradient(135deg,#0d9488,#0891b2);box-shadow:0 3px 10px rgba(13,148,136,.25);cursor:pointer;min-height:50px;min-width:64px;line-height:1}
@@ -578,6 +597,11 @@ function appendPart(w,u,pt){
   const part=document.createElement('span');part.className='part'+(isBold(u)?' marked':'');
   part.dataset.id=String(u.id);part.dataset.off=String(pt.off);
   partEls[u.id+':'+pt.off]=part;
+  const reserve=isBold(u)||cutsFor(u).length>0;
+  if(reserve){
+    const sz=document.createElement('span');sz.className='part-sizer';sz.setAttribute('aria-hidden','true');sz.textContent=pt.text;
+    part.appendChild(sz);part.classList.add('reserved');
+  }
   const b=document.createElement('button');b.className='part-btn';b.textContent=pt.text;b.dataset.act='seek';b.dataset.id=String(u.id);b.dataset.off=String(pt.off);part.appendChild(b);
   w.appendChild(part);
 }
@@ -813,14 +837,25 @@ async function save(){
 }
 window.addEventListener('beforeunload',e=>{if(queued||anyDirty(dirtyFlags)){e.preventDefault();e.returnValue=''}});
 
+function cuePart(it){return {text:it.pt.text,start:it.pt.s,end:it.pt.e,bold:isBold(it.u),id:it.u.id,off:it.pt.off}}
+function cueWordsFromLine(ln){
+  const words=[];
+  ln.items.forEach(it=>{
+    if(it.u.hidden||!it.pt||!it.pt.text)return;
+    const seg=cuePart(it), prev=words[words.length-1];
+    if(prev&&prev.id===seg.id){prev.parts.push(seg);prev.text+=seg.text;prev.end=seg.end}
+    else words.push({text:seg.text,start:seg.start,end:seg.end,bold:seg.bold,id:seg.id,off:seg.off,parts:[seg]});
+  });
+  return words;
+}
 $('export').onclick=()=>{
   const st=exportState(),pack=getLines(),cues=[];
   const packed=attachSilenceLines(pack);
   packed.lines.forEach(ln=>{
-    const segs=ln.items.filter(it=>!it.u.hidden).map(it=>({text:it.pt.text,start:it.pt.s,end:it.pt.e,bold:isBold(it.u),id:it.u.id,off:it.pt.off}));
-    if(!segs.length)return;
+    const words=cueWordsFromLine(ln);
+    if(!words.length)return;
     const parentKey=ln.silence&&String(ln.key).startsWith('s:')?String(ln.key).slice(2):String(ln.key);
-    cues.push({start:segs[0].start,end:segs[segs.length-1].end,text:segs.map(x=>x.text).join(' '),words:segs,silenceAfter:silences.has(String(ln.key)),silenceText:silenceTextOf(parentKey)||null,note:notes[String(ln.key)]||null,fromSilence:!!ln.silence});
+    cues.push({start:words[0].start,end:words[words.length-1].end,text:words.map(w=>w.text).join(' '),words,silenceAfter:silences.has(String(ln.key)),silenceText:silenceTextOf(parentKey)||null,note:notes[String(ln.key)]||null,fromSilence:!!ln.silence});
   });
   const blob=new Blob([JSON.stringify({project:PROJECT,exported_at:new Date().toISOString(),state:st,cues},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=PROJECT+'-subtitles.json';document.body.appendChild(a);a.click();a.remove();
@@ -945,26 +980,38 @@ function renderSub(u,pt,t){
   if(!u||u.hidden){clearSub();return}
   const ln=lineOf(u,pt);if(!ln){clearSub();return}
   if(t>(ln.items[ln.items.length-1].pt.e)+0.8){clearSub();return}
+  const groups=[];
+  ln.items.forEach(it=>{
+    if(it.u.hidden||!it.pt||!it.pt.text)return;
+    const g=groups[groups.length-1];
+    if(g&&g.u.id===it.u.id)g.items.push(it);
+    else groups.push({u:it.u,items:[it]});
+  });
   let html='';
-  ln.items.forEach((it,i)=>{
-    if(it.u.hidden||!it.pt.text)return;
-    const sameWord=i>0&&ln.items[i-1].u.id===it.u.id;
-    if(html && !sameWord)html+=' ';
-    const on=u&&it.u.id===u.id && pt && it.pt.off===pt.off;
-    const fx=effectOf(it.u);
-    const typ=fx&&fx.type&&fx.type!=='none'?fx.type:'';
-    let inner=esc(it.pt.text);
-    if(typ==='hidden') inner=highlightLetters(it.pt.text, fx.text2||'');
-    else if(typ==='typewriter') inner=typewriterHtml(it.pt.text,it.pt,t);
-    else if(typ==='morph' && fx.text2){
-      if(on) inner='<span class="from">'+esc(it.pt.text)+'</span><span class="to">'+esc(fx.text2)+'</span>';
-      else inner=esc(it.pt.text);
-    }else if(typ==='strike'){
-      inner=esc(it.pt.text)+(fx.text2?'<span class="fx-repl">'+esc(fx.text2)+'</span>':'');
-    }
-    const fxCls=typ?' fx fx-'+typ:'';
-    const started=t+0.02>=it.pt.s;
-    html+='<span class="tok'+(on?' on':'')+(isBold(it.u)&&started?' b':'')+'"><span class="'+(fxCls||'fx')+'">'+inner+'</span></span>';
+  groups.forEach((g,gi)=>{
+    if(gi)html+=' ';
+    const multi=g.items.length>1;
+    if(multi)html+='<span class="tokword">';
+    g.items.forEach(it=>{
+      const on=u&&it.u.id===u.id && pt && it.pt.off===pt.off;
+      const fx=effectOf(it.u);
+      const typ=fx&&fx.type&&fx.type!=='none'?fx.type:'';
+      let inner=esc(it.pt.text);
+      if(typ==='hidden') inner=highlightLetters(it.pt.text, fx.text2||'');
+      else if(typ==='typewriter') inner=typewriterHtml(it.pt.text,it.pt,t);
+      else if(typ==='morph' && fx.text2){
+        if(on) inner='<span class="from">'+esc(it.pt.text)+'</span><span class="to">'+esc(fx.text2)+'</span>';
+        else inner=esc(it.pt.text);
+      }else if(typ==='strike'){
+        inner=esc(it.pt.text)+(fx.text2?'<span class="fx-repl">'+esc(fx.text2)+'</span>':'');
+      }
+      const fxCls=typ?' fx fx-'+typ:'';
+      const started=t+0.02>=it.pt.s;
+      const boldish=isBold(it.u);
+      const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'');
+      html+='<span class="'+cls+'"><span class="tok-sizer" aria-hidden="true">'+esc(it.pt.text)+'</span><span class="tok-live'+(fxCls||'')+'">'+inner+'</span></span>';
+    });
+    if(multi)html+='</span>';
   });
   if(html===lastSubHtml)return;
   lastSubHtml=html;sub.innerHTML=html;
@@ -1175,6 +1222,7 @@ function openSlicePanel(u){
   const packed=cutsFromUnit(u);
   sliceClusters=packed.clusters;sliceCuts=packed.cuts;sliceCutHistory=[];slicePanX=0;sliceVariant='lines';
   sliceOpen=true;pts=[];sliceParticles=[];sliceRings=[];slicing=false;
+  const sw=$('sliceWord');if(sw){sw.classList.toggle('bold',!!isBold(u));sw.style.fontWeight=''}
   const pane=$('slicePane'),bd=$('sliceBackdrop');pane.classList.add('show');pane.setAttribute('aria-hidden','false');if(bd){bd.classList.add('show');bd.setAttribute('aria-hidden','false')}
   if(!v.paused)v.pause();
   const fx=$('sliceFx');if(fx&&!sliceCtx)sliceCtx=fx.getContext('2d');
@@ -1192,6 +1240,7 @@ function closeSlicePanel(){
   dismissTutorial();
   const pane=$('slicePane'),bd=$('sliceBackdrop');pane.classList.remove('show');pane.setAttribute('aria-hidden','true');if(bd){bd.classList.remove('show');bd.setAttribute('aria-hidden','true')}
   const ww=document.querySelector('#slicePane .wordwrap');if(ww)ww.style.transform='';
+  const sw=$('sliceWord');if(sw){sw.classList.remove('bold');sw.textContent='';sw.style.fontSize='';sw.style.fontWeight=''}
   removeEventListener('mousedown',startSlice);removeEventListener('mousemove',moveSlice);removeEventListener('mouseup',endSlice);
   removeEventListener('touchstart',startSlice);removeEventListener('touchmove',moveSlice);removeEventListener('touchend',endSlice);
   removeEventListener('resize',onSliceResize);
