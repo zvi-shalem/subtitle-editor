@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#12151b">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -285,6 +286,10 @@ body.cutmode .num{opacity:.28;pointer-events:none}
   <canvas id="sliceFx"></canvas>
 </div>
 <script>
+// Always run the newest version: if the server has a newer build than this cached copy, reload once.
+const BUILD='1794433595';
+(function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
+
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6ZmpkZHp2bnh1YnRtaWhieW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NzY4NjYsImV4cCI6MjEwNzA1Mjg2Nn0.mfGd4WLNiNh-mhpgCX2MjmzxOQIfWESS8CUGjYbB8FQ';
 // Old project links forward automatically to the newest project, so a saved home-screen link always opens the current one.
