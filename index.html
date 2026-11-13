@@ -409,7 +409,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794570398';
+const BUILD='1794571509';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -499,8 +499,8 @@ const FX_STRIKE_REPL_POP_S=0.22;
 const STRIKE_ICON_SVG='<svg class="fx-strike-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><text x="10" y="15" text-anchor="middle" font-size="14" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor">ס</text><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.7" stroke-dasharray="2.2 1.6" stroke-linecap="round"/></svg>';
 function applyFxIcon(el,fx){if(!el||!fx)return;el.textContent='';if(fx.iconHtml)el.innerHTML=fx.iconHtml;else el.textContent=fx.icon||''}
 const FX_DRAG_COUNT_DEF=2;
-/* Drag rhythm: accelerating (golden-ratio) gaps, squeezed into the rest of the word; each new letter pops with a short overshoot and the run gives a small elastic squash. Mirrored 1:1 in the Python renderer (subrender.py). */
-const FX_DRAG_G0=0.12,FX_DRAG_RATIO=0.618,FX_DRAG_GMIN=0.025,FX_DRAG_TMIN=0.16,FX_DRAG_POP_S=0.08,FX_DRAG_SQ_S=0.14;
+/* Drag rhythm: starts the moment the word lights (s), fast first then decelerating (gaps grow by the golden ratio), squeezed to fit the word; each new letter pops with a short overshoot and the run gives a small elastic squash. Mirrored 1:1 in the Python renderer (subrender.py). */
+const FX_DRAG_G0=0.028,FX_DRAG_RATIO=1.618,FX_DRAG_TMIN=0.12,FX_DRAG_POP_S=0.08,FX_DRAG_SQ_S=0.14;
 const FX_ENTER_S=0.18,SUB_CLEAR_AFTER=0.3;
 const DRAG_ICON_SVG='<svg class="fx-drag-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><text x="3.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor">ש</text><text x="9.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor" opacity=".72">ש</text><text x="15.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor" opacity=".42">ש</text></svg>';
 function letterClusters(text){return clusterize(String(text||''))}
@@ -515,10 +515,10 @@ function normalizeDrag(fx,text){
 }
 function dragLetterStart(s,e,i,len){const L=Math.max(1,len),dur=(e||0)-(s||0);return (s||0)+(i/L)*dur}
 function dragTimes(s,e,i,len,count){
-  const t0=dragLetterStart(s,e,i,len),g=[];let N=0;
-  for(let k=0;k<count;k++){const v=Math.max(FX_DRAG_GMIN,FX_DRAG_G0*Math.pow(FX_DRAG_RATIO,k));g.push(v);N+=v}
-  const avail=Math.max(0,(e||0)-t0),T=Math.min(N,Math.max(avail,FX_DRAG_TMIN)),k2=N>0?T/N:1,out=[];let acc=0;
-  for(let k=0;k<count;k++){acc+=g[k]*k2;out.push(t0+acc)}
+  const s0=s||0,g=[];let N=0;
+  for(let k=0;k<count;k++){const v=FX_DRAG_G0*Math.pow(FX_DRAG_RATIO,k);g.push(v);N+=v}
+  const avail=Math.max(FX_DRAG_TMIN,(e||0)-s0),k2=N>avail?avail/N:1,out=[];let acc=0;
+  for(let k=0;k<count;k++){acc+=g[k]*k2;out.push(s0+acc)}
   return out;
 }
 function dragShownExtras(s,e,i,len,count,t){return dragTimes(s,e,i,len,count).filter(x=>(t||0)+0.02>=x).length}
