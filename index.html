@@ -136,6 +136,8 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .modal .actions{display:flex;gap:8px;justify-content:flex-start}
 .modal .ok{background:var(--acc);color:#111;font:inherit;font-weight:800;border:0;border-radius:8px;padding:10px 16px}
 .modal .cancel{background:#262b35;color:var(--fg);font:inherit;border:0;border-radius:8px;padding:10px 16px}
+.modal .remove{background:#4a1a1f;color:#ffb3b3;font:inherit;font-weight:800;border:1px solid #e05555;border-radius:8px;padding:10px 16px}
+.modal .confirm-q{margin:0 0 16px;color:var(--fg);font-size:17px;font-weight:700;line-height:1.45}
 .snack{position:fixed;left:8px;right:8px;bottom:calc(60px + env(safe-area-inset-bottom));z-index:16;background:#2a2f3a;color:var(--fg);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;direction:rtl;font-size:14px;line-height:1.4;box-shadow:0 8px 24px #0008}
 .snack span{flex:1;min-width:0}
 .snack button{font:inherit;font-weight:800;border:0;background:var(--acc);color:#111;border-radius:8px;padding:6px 12px;flex:0 0 auto}
@@ -302,7 +304,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794563783';
+const BUILD='1794563914';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -595,7 +597,23 @@ function noteTitle(note){
   return 'הערה: '+(note.text||'ידני');
 }
 function closeNoteMenu(){const m=$('nmenu');if(m)m.remove()}
-function closeWordEdit(){const m=$('wsheet');if(m)m.remove();const bg=$('wsheet-bg');if(bg)bg.remove()}
+function closeRemoveConfirm(){const m=$('rmodal');if(m)m.remove()}
+function closeWordEdit(){closeRemoveConfirm();const m=$('wsheet');if(m)m.remove();const bg=$('wsheet-bg');if(bg)bg.remove()}
+function confirmRemoveWord(label,onYes){
+  closeRemoveConfirm();
+  const bg=document.createElement('div');bg.className='modal-bg';bg.id='rmodal';bg.setAttribute('role','dialog');bg.setAttribute('aria-modal','true');bg.setAttribute('aria-label','אישור הסרת מילה');
+  const box=document.createElement('div');box.className='modal';
+  const q=document.createElement('p');q.className='confirm-q';q.textContent='להסיר את המילה «'+(label||'')+'»?';
+  const actions=document.createElement('div');actions.className='actions';
+  const ok=document.createElement('button');ok.type='button';ok.className='remove';ok.textContent='הסר';ok.setAttribute('aria-label','הסר');
+  const cancel=document.createElement('button');cancel.type='button';cancel.className='cancel';cancel.textContent='ביטול';
+  cancel.onclick=e=>{e.stopPropagation();closeRemoveConfirm()};
+  ok.onclick=e=>{e.stopPropagation();closeRemoveConfirm();if(onYes)onYes()};
+  bg.addEventListener('click',ev=>{if(ev.target===bg)closeRemoveConfirm()});
+  actions.append(ok,cancel);box.append(q,actions);bg.appendChild(box);document.body.appendChild(bg);
+  setTimeout(()=>ok.focus(),0);
+}
+
 function esc(s){return String(s||'').replace(/[<>&]/g,'')}
 function highlightLetters(text, which){
   const chars=[...text], marks=new Array(chars.length).fill(false);
@@ -726,16 +744,19 @@ function openWordEdit(unit){
   del.title='הסר מילה';del.setAttribute('aria-label','הסר מילה');
   del.onclick=e=>{
     e.stopPropagation();
-    closeWordEdit();
-    change(()=>{removed[key]=true;dirtyFlags.layout=true},'edits');
+    const label=inp.value.trim()||(words[unit.orig]?words[unit.orig].w:'')||'';
+    confirmRemoveWord(label,()=>{
+      closeWordEdit();
+      change(()=>{removed[key]=true;dirtyFlags.layout=true},'edits');
+    });
   };
   actions.append(ok,cancel,del);
   if(cutLocked)sheet.append(h,row,blocked,actions);
   else sheet.append(h,row,chips,fieldWrap,actions);
   bg.addEventListener('click',()=>closeWordEdit());
   sheet.addEventListener('click',e=>e.stopPropagation());
-  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save()}if(e.key==='Escape'){e.preventDefault();closeWordEdit()}};
-  inp2.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save()}if(e.key==='Escape'){e.preventDefault();closeWordEdit()}};
+  const onEditKey=e=>{if(e.key==='Enter'){e.preventDefault();if(!$('rmodal'))save()}if(e.key==='Escape'){e.preventDefault();if($('rmodal'))closeRemoveConfirm();else closeWordEdit()}};
+  inp.onkeydown=onEditKey;inp2.onkeydown=onEditKey;
   document.body.append(bg,sheet);
   setTimeout(()=>focusCaretEnd(inp),0);
 }
@@ -968,7 +989,7 @@ linesEl.addEventListener('pointerup',clearLp);
 linesEl.addEventListener('pointercancel',clearLp);
 linesEl.addEventListener('contextmenu',e=>{if(e.target.closest('[data-act="seek"]'))e.preventDefault()});
 document.addEventListener('click',e=>{if(!e.target.closest('.nmenu,.nbtn'))closeNoteMenu()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('wsheet')){e.preventDefault();closeWordEdit()}});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('rmodal')){e.preventDefault();closeRemoveConfirm();return}if($('wsheet')){e.preventDefault();closeWordEdit()}});
 
 (function(){
   const btn=$('helpBtn'),pop=$('helpPop');
