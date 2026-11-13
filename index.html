@@ -17,7 +17,7 @@
 <title>עורך כתוביות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&family=Heebo:wght@400;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Heebo:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0f1115;--card:#181b22;--fg:#f2f2f2;--mut:#8b93a3;--acc:#ffcc33;--acc2:#4fa3ff;--bar:#12151b;--header-h:52px;--early:#ff9f43;--late:#4fa3ff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -96,27 +96,29 @@ input[type=range]{flex:1;min-width:40px;direction:ltr;accent-color:var(--acc2);h
 .vwrap.big{height:min(50vh,420px)}
 .vwrap.land{height:auto;width:230px;aspect-ratio:var(--var-ar,16/9)}
 .vwrap.land.big{height:auto;width:calc(100vw - 16px);max-width:760px}
-.vwrap.land .sub{font-size:13px;line-height:1.3}
-.vwrap.land .sub .tokword{padding-inline:0.22em}
+.vwrap.land .sub{font-size:13px;line-height:1.3;--sub-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000,-1.5px 0 0 #000,1.5px 0 0 #000,0 -1.5px 0 #000,0 1.5px 0 #000,0 2px 5px rgba(0,0,0,.55)}
 .vwrap.land.big .sub{font-size:clamp(20px,5.6vw,34px)}
 video{width:100%;height:100%;display:block;object-fit:contain}
-.sub{position:absolute;left:2px;right:2px;bottom:10%;text-align:center;font-size:12px;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;direction:rtl;line-height:1.35;font-weight:400}
-.vwrap.big .sub{font-size:20px}
-.sub .tokword{display:inline-flex;align-items:baseline;white-space:nowrap;vertical-align:baseline;max-width:100%;padding-inline:0.16em;gap:0}
-.sub .tok{display:inline-block;position:relative;transform-origin:center center;font-weight:400;vertical-align:baseline;transform:none}
-.sub .tok-sizer{visibility:hidden;display:inline-block;white-space:nowrap;font-weight:400;pointer-events:none;line-height:1}
+.sub{z-index:3;--sub-color:#fff;--sub-lit:#7FE3FF;--sub-weight:700;--sub-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000,-2px 0 0 #000,2px 0 0 #000,0 -2px 0 #000,0 2px 0 #000,0 2px 6px rgba(0,0,0,.55);position:absolute;left:2px;right:2px;bottom:10%;display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;column-gap:.4em;row-gap:.15em;text-align:center;font-size:12px;color:var(--sub-color);direction:rtl;line-height:1.35;font-weight:var(--sub-weight);background:transparent;padding:0;width:auto;max-width:none;transform:none;border-radius:0}
+.vwrap.big .sub{font-size:20px;--sub-shadow:-2.5px -2.5px 0 #000,2.5px -2.5px 0 #000,-2.5px 2.5px 0 #000,2.5px 2.5px 0 #000,-2.5px 0 0 #000,2.5px 0 0 #000,0 -2.5px 0 #000,0 2.5px 0 #000,0 3px 8px rgba(0,0,0,.6)}
+/* word units are flex items; gap on .sub is the visible space. cut parts live inside one .tokword with no gap */
+.sub .tokword{display:inline-flex;align-items:baseline;white-space:nowrap;vertical-align:baseline;max-width:100%;gap:0;margin:0;padding:0}
+.sub .tok{display:inline-block;position:relative;transform-origin:center center;font-weight:var(--sub-weight);vertical-align:baseline;transform:none}
+.sub .tok-sizer{visibility:hidden;display:inline-block;white-space:nowrap;font-weight:var(--sub-weight);pointer-events:none;line-height:1}
 .sub .tok.slot-b .tok-sizer{font-weight:800;font-size:1.25em}
-.sub .tok-live{position:absolute;left:50%;top:50%;translate:-50% -50%;scale:1;transform:none;transform-origin:center center;white-space:nowrap;font-weight:400;transition:scale .16s ease,color .16s ease}
-.sub .tok.on .tok-live{color:var(--acc);scale:1.1}
+.sub .tok-live{position:absolute;left:50%;top:50%;translate:-50% -50%;scale:1;transform:none;transform-origin:center center;white-space:nowrap;font-weight:var(--sub-weight);color:var(--sub-color);text-shadow:var(--sub-shadow);-webkit-text-stroke:0;paint-order:stroke fill;transition:scale .16s ease,color .16s ease,text-shadow .16s ease}
+.sub .tok.on .tok-live{color:var(--sub-lit);scale:1.1}
 .sub .tok.b .tok-live{font-weight:800}
-.sub .tok.on.b .tok-live{font-weight:800;color:var(--acc);scale:1.25}
+.sub .tok.on.b .tok-live{font-weight:800;color:var(--sub-lit);scale:1.25}
 /* cut parts stay one word: in-flow font-size so a lit bold part shifts neighbors instead of overlapping */
 .sub .tokword .tok{display:inline-block;position:relative}
 .sub .tokword .tok-sizer{display:none}
-.sub .tokword .tok-live{position:static;left:auto;right:auto;top:auto;inset:auto;translate:none;scale:none;transform:none;font-size:1em;font-weight:400;transition:font-size .16s ease,color .16s ease,font-weight .16s ease}
-.sub .tokword .tok.on .tok-live{color:var(--acc);font-size:1.1em;scale:none;translate:none}
+.sub .tokword .tok-live{position:static;left:auto;right:auto;top:auto;inset:auto;translate:none;scale:none;transform:none;font-size:1em;font-weight:var(--sub-weight);transition:font-size .16s ease,color .16s ease,font-weight .16s ease,text-shadow .16s ease}
+.sub .tokword .tok.on .tok-live{color:var(--sub-lit);font-size:1.1em;scale:none;translate:none}
 .sub .tokword .tok.b .tok-live{font-weight:800}
-.sub .tokword .tok.on.b .tok-live{font-weight:800;color:var(--acc);font-size:1.25em;scale:none;translate:none}
+.sub .tokword .tok.on.b .tok-live{font-weight:800;color:var(--sub-lit);font-size:1.25em;scale:none;translate:none}
+.vwrap[data-caption="yellow"] .sub{--sub-color:#fff;--sub-lit:#ffcc33;--sub-weight:400;--sub-shadow:0 0 3px #000,0 0 3px #000}
+.vwrap[data-caption="box"] .sub{--sub-color:#fff;--sub-lit:#FF8A4C;--sub-weight:700;--sub-shadow:0 1px 2px rgba(0,0,0,.7);left:50%;right:auto;width:max-content;max-width:calc(100% - 12px);transform:translateX(-50%);background:rgba(0,0,0,.58);border-radius:10px;padding:3px 10px}
 .vbig{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:14px;padding:0}
 #vpause{position:fixed;z-index:11;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:16px;line-height:1;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px #0006;cursor:pointer}
 #vpause.show{display:inline-flex}
@@ -165,10 +167,10 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .tok .fx-pop{animation:none}
 .tok.on .tok-fx.fx-pop{animation:fx-pop .45s cubic-bezier(.15,.85,.3,1) both}
 @keyframes fx-pop{
-  0%{transform:scale(.72);filter:brightness(1.3);text-shadow:0 0 6px rgba(255,220,80,.6)}
-  28%{transform:scale(1.18);filter:brightness(1.55);text-shadow:0 0 10px rgba(255,204,51,.75)}
-  70%{transform:scale(.98);filter:brightness(1.08);text-shadow:none}
-  100%{transform:scale(1);filter:none;text-shadow:none}
+  0%{transform:scale(.72);filter:brightness(1.3) drop-shadow(0 0 6px var(--sub-lit,#7FE3FF))}
+  28%{transform:scale(1.18);filter:brightness(1.55) drop-shadow(0 0 10px var(--sub-lit,#7FE3FF))}
+  70%{transform:scale(.98);filter:brightness(1.08)}
+  100%{transform:scale(1);filter:none}
 }
 .vwrap.exploding{animation:vwrap-boom .36s ease-out}
 @keyframes vwrap-boom{
@@ -249,6 +251,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 <header id="hdr">
   <h1 id="title">עורך כתוביות</h1>
   <span id="status" class="status">טוען…</span>
+  <button class="hbtn icon" id="captionStyle" type="button" aria-label="סגנון כתוביות" title="סגנון כתוביות">🎨</button>
   <button class="hbtn icon" id="cutmode" aria-label="מצב עריכת חיתוכים" title="מצב עריכת חיתוכים" aria-pressed="false">✂️</button>
   <button class="hbtn" id="undo" title="ביטול פעולה אחרונה">↶ בטל</button>
   <button class="hbtn" id="export">ייצוא JSON</button>
@@ -256,7 +259,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </header>
 <div class="help">לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה עורכת טקסט ואפקט · <b>B</b> סימון הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · כל שינוי נשמר</div>
 <div id="lines"></div>
-<div class="vwrap" id="vwrap"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><canvas id="subFx" aria-hidden="true"></canvas><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
+<div class="vwrap" id="vwrap" data-caption="outline"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><canvas id="subFx" aria-hidden="true"></canvas><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
 <button type="button" id="vpause" title="השהה" aria-label="השהה">⏸</button>
 <div class="player" id="player">
   <button class="ib" id="back" aria-label="5 שניות אחורה">−5</button>
@@ -288,7 +291,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794500773';
+const BUILD='1794529365';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -304,7 +307,7 @@ let words=[],breaks=new Set(),bold=new Set(),notes={},wordCuts=[],cutBreaks=new 
 let undoStack=[],saveTimer=null,saving=false,queued=false;
 let dirtyFlags={layout:false,notes:false,cuts:false,silences:false,edits:false,effects:false};
 let nowId=null,nowOff=0,unitEls={},partEls={},unitsCache=[],linesCache=[];
-let songTitle='',performerName='',waNumber='';
+let songTitle='',performerName='',waNumber='',captionStyle='outline';
 let cutMode=false,playOnTap=true,snackTimer=null,lpTimer=null,lpOpened=false,lpStart=null,suppressSeek=false,silEditKey=null;
 
 function setStatus(t,err){statusEl.textContent=t;statusEl.classList.toggle('err',!!err)}
@@ -314,11 +317,36 @@ function hasOwn(o,k){return Object.prototype.hasOwnProperty.call(o,k)}
 function cloneNotes(n){try{return JSON.parse(JSON.stringify(n||{}))}catch(e){return {}}}
 function parseId(val){return (val!=null && /^-?\d+$/.test(String(val)))?+val:val}
 function sortMixed(arr){return [...arr].sort((a,b)=>{const ap=String(a).split(/[.:]/).map(Number),bp=String(b).split(/[.:]/).map(Number);for(let i=0;i<Math.max(ap.length,bp.length);i++){const d=(ap[i]||0)-(bp[i]||0);if(d)return d}return 0})}
-const FLAG_KEYS=['layout','notes','cuts','silences','edits','effects','partBold'];
+const FLAG_KEYS=['layout','notes','cuts','silences','edits','effects','partBold','captionStyle'];
 function emptyFlags(){const o={};FLAG_KEYS.forEach(k=>o[k]=false);return o}
 function anyDirty(f){return FLAG_KEYS.some(k=>f[k])}
 function restoreFlags(flags){FLAG_KEYS.forEach(k=>{if(flags[k])dirtyFlags[k]=true})}
 function cloneObj(n){try{return JSON.parse(JSON.stringify(n||{}))}catch(e){return {}}}
+const CAPTION_STYLES=['outline','yellow','box'];
+const CAPTION_STYLE_LABELS={outline:'לבן עם מסגרת',yellow:'צהוב קלאסי',box:'תיבה כהה'};
+const CAPTION_STYLE_KEY='subs-captionStyle';
+function normalizeCaptionStyle(s){return CAPTION_STYLES.includes(s)?s:'outline'}
+function applyCaptionStyle(s,persist){
+  captionStyle=normalizeCaptionStyle(s);
+  const vw=$('vwrap');if(vw)vw.setAttribute('data-caption',captionStyle);
+  const btn=$('captionStyle');
+  if(btn){
+    btn.title='סגנון כתוביות';
+    btn.setAttribute('aria-label','סגנון כתוביות: '+CAPTION_STYLE_LABELS[captionStyle]);
+  }
+  if(persist){
+    try{localStorage.setItem(CAPTION_STYLE_KEY,captionStyle)}catch(e){}
+    dirtyFlags.captionStyle=true;
+    queueSave();
+  }
+}
+function readStoredCaptionStyle(){
+  try{return normalizeCaptionStyle(localStorage.getItem(CAPTION_STYLE_KEY))}catch(e){return 'outline'}
+}
+function cycleCaptionStyle(){
+  const i=Math.max(0,CAPTION_STYLES.indexOf(captionStyle));
+  applyCaptionStyle(CAPTION_STYLES[(i+1)%CAPTION_STYLES.length],true);
+}
 const FX=[
   {type:'none',icon:'○',label:'ללא',need:false,field:''},
   {type:'hidden',icon:'🔍',label:'מילה חבויה',need:'letters',field:'אילו אותיות'},
@@ -476,6 +504,7 @@ async function load(){
     wordEdits=(st.wordEdits&&typeof st.wordEdits==='object'&&!Array.isArray(st.wordEdits))?{...st.wordEdits}:{};
     effects=(st.effects&&typeof st.effects==='object'&&!Array.isArray(st.effects))?cloneObj(st.effects):{};
     partBold=(st.partBold&&typeof st.partBold==='object'&&!Array.isArray(st.partBold))?cloneObj(st.partBold):{};
+    applyCaptionStyle(CAPTION_STYLES.includes(st.captionStyle)?st.captionStyle:readStoredCaptionStyle(),false);
     if(words.length)breaks.add(lastWordIdx());
     v.src=data.video_url||'';
     render();setStatus('נשמר ✓');layoutChrome();
@@ -852,6 +881,8 @@ linesEl.addEventListener('contextmenu',e=>{if(e.target.closest('[data-act="seek"
 document.addEventListener('click',e=>{if(!e.target.closest('.nmenu,.nbtn'))closeNoteMenu()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('wsheet')){e.preventDefault();closeWordEdit()}});
 
+$('captionStyle').onclick=cycleCaptionStyle;
+applyCaptionStyle(readStoredCaptionStyle(),false);
 $('cutmode').onclick=()=>{cutMode=!cutMode;$('cutmode').setAttribute('aria-pressed',cutMode?'true':'false');document.body.classList.toggle('cutmode',cutMode);render(true)};
 $('undo').onclick=()=>{
   hideSnack();const s=undoStack.pop();if(!s)return;
@@ -869,6 +900,7 @@ function exportState(){
   if(Object.keys(wordEdits).length)o.wordEdits={...wordEdits};
   if(Object.keys(effects).length)o.effects=cloneObj(effects);
   if(Object.keys(partBold).length)o.partBold=cloneObj(partBold);
+  o.captionStyle=captionStyle;
   return o;
 }
 function queueSave(){queued=true;setStatus('שומר…');clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
@@ -898,6 +930,7 @@ async function save(){
     if(flags.edits){if(Object.keys(wordEdits).length)merged.wordEdits={...wordEdits};else delete merged.wordEdits}
     if(flags.effects){if(Object.keys(effects).length)merged.effects=cloneObj(effects);else delete merged.effects}
     if(flags.partBold){if(Object.keys(partBold).length)merged.partBold=cloneObj(partBold);else delete merged.partBold}
+    if(flags.captionStyle){if(captionStyle)merged.captionStyle=captionStyle;else delete merged.captionStyle}
     const body=JSON.stringify({state:merged,updated_at:new Date().toISOString()});
     try{localStorage.setItem('subs-'+PROJECT,body)}catch(e){}
     const url=`${SB_URL}/rest/v1/subtitle_projects?id=eq.${encodeURIComponent(PROJECT)}`+(row.updated_at?`&updated_at=eq.${encodeURIComponent(row.updated_at)}`:'');
@@ -913,6 +946,7 @@ async function save(){
     if(!flags.edits && !dirtyFlags.edits){wordEdits=(server.wordEdits&&typeof server.wordEdits==='object'&&!Array.isArray(server.wordEdits))?{...server.wordEdits}:{};needRender=true}
     if(!flags.effects && !dirtyFlags.effects){effects=(server.effects&&typeof server.effects==='object'&&!Array.isArray(server.effects))?cloneObj(server.effects):{};needRender=true}
     if(!flags.partBold && !dirtyFlags.partBold){partBold=(server.partBold&&typeof server.partBold==='object'&&!Array.isArray(server.partBold))?cloneObj(server.partBold):{};needRender=true}
+    if(!flags.captionStyle && !dirtyFlags.captionStyle && CAPTION_STYLES.includes(server.captionStyle) && server.captionStyle!==captionStyle){applyCaptionStyle(server.captionStyle,false);needRender=true}
     if(needRender && !anyDirty(dirtyFlags))render(true);
     if(!queued && !anyDirty(dirtyFlags))setStatus('נשמר ✓');
   }catch(e){
@@ -1075,10 +1109,8 @@ function renderSub(u,pt,t){
     else groups.push({u:it.u,items:[it]});
   });
   let html='';
-  groups.forEach((g,gi)=>{
-    if(gi)html+=' ';
-    const multi=g.items.length>1;
-    if(multi)html+='<span class="tokword">';
+  groups.forEach(g=>{
+    html+='<span class="tokword">';
     g.items.forEach(it=>{
       const on=u&&it.u.id===u.id && pt && it.pt.off===pt.off;
       const fx=effectOf(it.u);
@@ -1098,7 +1130,7 @@ function renderSub(u,pt,t){
       const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'');
       html+='<span class="'+cls+'"><span class="tok-sizer" aria-hidden="true">'+esc(it.pt.text)+'</span><span class="tok-live"><span class="tok-fx'+(fxCls||'')+'">'+inner+'</span></span></span>';
     });
-    if(multi)html+='</span>';
+    html+='</span>';
   });
   if(html===lastSubHtml)return;
   lastSubHtml=html;sub.innerHTML=html;
