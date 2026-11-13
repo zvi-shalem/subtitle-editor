@@ -409,7 +409,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794572023';
+const BUILD='1794572297';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -518,19 +518,22 @@ function dragRatioFor(n,g0,T){const sum=r=>{let a=0,p=1;for(let k=0;k<n;k++){a+=
 function dragTimes(s,e,i,len,count,capEnd){
   const s0=s||0,end=(capEnd!=null&&isFinite(capEnd))?capEnd:(e||0)+SUB_CLEAR_AFTER;
   const T=Math.min(FX_DRAG_TMAX,Math.max(FX_DRAG_TMIN,end-FX_DRAG_END_PAD-s0));
-  const r=dragRatioFor(count,FX_DRAG_G0,T),g=[];let N=0;
+  const r=count<=2?FX_DRAG_RATIO:dragRatioFor(count,FX_DRAG_G0,T),g=[];let N=0; /* short drags (<=2) stay fast: natural golden-ratio gaps, never stretched */
   for(let k=0;k<count;k++){const v=FX_DRAG_G0*Math.pow(r,k);g.push(v);N+=v}
   const k2=N>T?T/N:1,out=[];let acc=0;
   for(let k=0;k<count;k++){acc+=g[k]*k2;out.push(s0+acc)}
   return out;
 }
 /* When the caption holding a line disappears: its last word end + tail, or earlier if the next line takes over. */
+function lineHasDrag(ln){return !!(ln&&ln.items.some(it=>it.u&&!it.u.hidden&&!it.u.removed&&!it.u.blank&&it.pt&&(effectOf(it.u)||{}).type==='drag'))}
+/* Lines with a drag stay on screen until the next line starts, so the drag can live; other lines clear SUB_CLEAR_AFTER after their last word. */
 function captionEndOf(ln){
   if(!ln)return null;
   const vis=ln.items.filter(it=>it.u&&!it.u.hidden&&!it.u.removed&&!it.u.blank&&it.pt);
-  let end=(vis.length?vis[vis.length-1].pt.e:0)+SUB_CLEAR_AFTER;
+  let end=(vis.length?vis[vis.length-1].pt.e:0)+SUB_CLEAR_AFTER,next=null;
   const idx=linesCache.indexOf(ln);
-  for(let j=idx+1;j>0&&j<linesCache.length;j++){const f=(linesCache[j].items||[]).find(it=>it.pt&&it.u);if(f){end=Math.min(end,(f.pt.s||0)-0.02);break}}
+  for(let j=idx+1;j>0&&j<linesCache.length;j++){const f=(linesCache[j].items||[]).find(it=>it.pt&&it.u);if(f){next=(f.pt.s||0)-0.02;break}}
+  if(next!=null)end=lineHasDrag(ln)?Math.max(end,next):Math.min(end,next);
   return end;
 }
 function dragShownExtras(s,e,i,len,count,t,capEnd){return dragTimes(s,e,i,len,count,capEnd).filter(x=>(t||0)+0.02>=x).length}
@@ -1853,7 +1856,7 @@ function renderSub(u,pt,t){
   const ln=lineOf(u,pt);if(!ln){clearSub();return}
   const vis=ln.items.filter(it=>it.u&&!it.u.hidden&&!it.u.removed&&!it.u.blank&&it.pt);
   const lastE=vis.length?vis[vis.length-1].pt.e:0;
-  if(t>lastE+SUB_CLEAR_AFTER){clearSub();return}
+  if(t>(lineHasDrag(ln)?captionEndOf(ln):lastE+SUB_CLEAR_AFTER)){clearSub();return}
   const wordByWord=isWordReveal();
   const groups=[];
   ln.items.forEach(it=>{
