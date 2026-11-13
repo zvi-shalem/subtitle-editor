@@ -261,6 +261,11 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 #slicePane button.act{font-family:inherit;font-size:1.4rem;font-weight:700;border:none;border-radius:16px;padding:10px 22px;color:#fff;background:linear-gradient(135deg,#0d9488,#0891b2);box-shadow:0 3px 10px rgba(13,148,136,.25);cursor:pointer;min-height:50px;min-width:64px;line-height:1}
 #slicePane button.act.ghost{background:#fff;color:#0d9488;border:2px solid #0d9488;box-shadow:none}
 #slicePane button.act.submit{background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 3px 12px rgba(234,88,12,.3)}
+#slicePane button.act.stutter{font-size:1.15rem;padding:10px 12px;min-width:70px;letter-spacing:-1px}
+#slicePane button.act.stutter.on{background:linear-gradient(135deg,#0d9488,#0891b2);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(13,148,136,.25)}
+#sliceGaps{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2}
+#sliceGaps button{pointer-events:auto;position:absolute;transform:translate(-50%,-50%);width:28px;height:28px;padding:0;border:0;border-radius:50%;background:#fff;color:#0d9488;box-shadow:0 1px 6px rgba(13,148,136,.28);font-size:14px;line-height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#sliceGaps button.on{background:#0d9488;color:#fff}
 #sliceFx{position:absolute;left:0;top:0;width:100%;height:100%;z-index:46;pointer-events:none}
 #sliceTutorial{position:fixed;pointer-events:none;z-index:60;display:none}
 #sliceTutorial.show{display:block}
@@ -282,7 +287,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
   <button class="hbtn icon" id="cutmode" aria-label="מצב עריכת חיתוכים" title="מצב עריכת חיתוכים" aria-pressed="false">✂️</button>
   <button class="hbtn icon" id="undo" type="button" aria-label="בטל" title="בטל">↶</button>
   <button class="hbtn submit" id="submit" type="button">הגש</button>
-  <div class="help-pop" id="helpPop" hidden>לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה על מילה עורכת · לחיצה ארוכה על שורה: אפקט לכל השורה · רווח מפצל למילים · <b>🗑</b> הסר · <b>B</b> הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך</div>
+  <div class="help-pop" id="helpPop" hidden>לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה על מילה עורכת · לחיצה ארוכה על שורה: אפקט לכל השורה · רווח מפצל למילים · <b>🗑</b> הסר · <b>B</b> הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · <b>✂️…</b> חיתוך עם שלוש נקודות</div>
 </header>
 <div id="lines"></div>
 <div class="vwrap" id="vwrap" data-caption="outline"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><canvas id="subFx" aria-hidden="true"></canvas><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
@@ -306,18 +311,20 @@ body.cutmode .num{opacity:.28;pointer-events:none}
     <div class="wordwrap">
       <div id="sliceWord"></div>
       <svg id="sliceOverlay"></svg>
+      <div id="sliceGaps"></div>
     </div>
   </div>
   <div id="sliceBolds" class="slice-bolds" hidden></div>
   <div class="controls">
     <button type="button" class="act ghost" id="sliceCancel" title="ביטול" aria-label="ביטול">✕</button>
+    <button type="button" class="act ghost stutter" id="sliceStutter" title="חיתוך עם שלוש נקודות" aria-label="חיתוך עם שלוש נקודות" aria-pressed="false">✂️…</button>
     <button type="button" class="act submit" id="sliceOk" title="אישור" aria-label="אישור">✓</button>
   </div>
   <canvas id="sliceFx"></canvas>
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794564894';
+const BUILD='1794565439';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -456,8 +463,9 @@ function tokensOf(i){
   if(!has)return [words[i]?words[i].w:''];
   const t=String(raw).trim();return t?t.split(/\s+/).filter(Boolean):[];
 }
+function tokenLetterLen(t){return Math.max(0,[...String(t)].filter(ch=>ch!=='.'&&ch!=='…').length)}
 function splitTiming(s,e,tokens){
-  const lens=tokens.map(t=>[...t].length);
+  const lens=tokens.map(tokenLetterLen);
   const total=Math.max(1,lens.reduce((a,b)=>a+b,0)),dur=e-s;
   let acc=0;
   return tokens.map((t,k)=>{const start=s+(acc/total)*dur;acc+=lens[k];return {text:t,s:start,e:s+(acc/total)*dur}});
@@ -1630,7 +1638,7 @@ function saveSilText(key,val){
 /* ===== scissors cut panel (ported from hataama slice.html, lines mode default) ===== */
 const SLICE_TUTORIAL_KEY='subs-slice-tutorial-seen';
 const WORD_FONT_FLOOR=28;
-let sliceUnit=null, sliceOpen=false, sliceCuts={}, sliceCutHistory=[], sliceClusters=[], sliceBoundaryX=[], sliceBandTol=[], sliceWordTop=0, sliceWordBottom=0, slicePanX=0, sliceLastBIdx=[], sliceVariant='lines', slicePartBold={};
+let sliceUnit=null, sliceOpen=false, sliceCuts={}, sliceCutHistory=[], sliceClusters=[], sliceBoundaryX=[], sliceBandTol=[], sliceWordTop=0, sliceWordBottom=0, slicePanX=0, sliceLastBIdx=[], sliceVariant='lines', slicePartBold={}, sliceStutterMode=false, sliceCutsBeforeStutter=null;
 let slicing=false, pts=[], lastP=null, sliceThrottle=false, sliceDragMode=undefined, sliceSwipePath=[], sliceStartY=0, swipeBtnDone={}, swipeBtnHit=false;
 let sliceParticles=[], sliceRings=[], sliceFlashes=[], sliceCtx=null, sliceFxRaf=0;
 
@@ -1656,11 +1664,22 @@ function maxPan(){const word=$('sliceWord');return Math.max(0,(word.scrollWidth-
 function setPanX(v){const m=maxPan();slicePanX=Math.max(-m,Math.min(m,v||0));const ww=document.querySelector('#slicePane .wordwrap');if(ww)ww.style.transform=slicePanX?('translateX('+slicePanX+'px)'):''}
 
 function isOpen(b){return !!sliceCuts[b]}
+function stutterCutBoundary(){const keys=Object.keys(sliceCuts).map(Number).filter(b=>sliceCuts[b]).sort((a,b)=>a-b);return keys.length?keys[0]:-1}
+function stutterEditText(){
+  if(!sliceUnit)return '';
+  const offs=clusterOffsets(sliceClusters);
+  const b=stutterCutBoundary();
+  if(b<0||offs[b+1]==null)return '';
+  const off=offs[b+1], chars=[...sliceUnit.text];
+  if(!(off>0&&off<chars.length))return '';
+  return chars.slice(0,off).join('')+'... '+chars.slice(off).join('');
+}
 function buildDisplay(){
   const cl=sliceClusters,THINSP='\u2009';
   let text='',bIdx=[],i=0;
+  const stutterAt=sliceStutterMode?stutterCutBoundary():-1;
   function gapAfter(idx){if(isOpen(idx)){const s=text.length;text+=THINSP+THINSP;bIdx[idx]=s+1}else bIdx[idx]=text.length}
-  while(i<cl.length){text+=cl[i];if(i<cl.length-1&&bIdx[i]===undefined)gapAfter(i);i++}
+  while(i<cl.length){text+=cl[i];if(i===stutterAt)text+='...';if(i<cl.length-1&&bIdx[i]===undefined)gapAfter(i);i++}
   return {text,bIdx};
 }
 function sliceMeasure(){
@@ -1703,7 +1722,7 @@ function renderSliceBolds(){
   const row=$('sliceBolds');if(!row)return;
   const parts=slicePreviewParts();
   row.textContent='';
-  if(!sliceUnit||parts.length<2){row.hidden=true;return}
+  if(!sliceUnit||sliceStutterMode||parts.length<2){row.hidden=true;return}
   row.hidden=false;
   parts.forEach(p=>{
     const btn=document.createElement('button');btn.type='button';btn.className='sbb'+(slicePartIsBold(p.off)?' on':'');
@@ -1714,6 +1733,26 @@ function renderSliceBolds(){
   });
 }
 function mkSvg(tag,attrs){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e}
+function renderSliceGaps(){
+  const host=$('sliceGaps');if(!host)return;host.textContent='';
+  const word=$('sliceWord');if(!word)return;
+  const wr=word.getBoundingClientRect();
+  for(let b=0;b<sliceClusters.length-1;b++){
+    if(isSpaceCluster(sliceClusters[b])||sliceBoundaryX[b]==null)continue;
+    const x=sliceBoundaryX[b]-wr.left;
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.dataset.sliceGap=String(b);
+    btn.className=sliceCuts[b]?'on':'';
+    btn.textContent='✂️';
+    btn.title=sliceStutterMode?'חיתוך עם שלוש נקודות':'חיתוך כאן';
+    btn.setAttribute('aria-label',btn.title);
+    btn.style.left=x+'px';
+    btn.style.top='10px';
+    (function(bb){btn.addEventListener('click',function(ev){ev.stopPropagation();ev.preventDefault();toggleSliceCut(bb,!sliceCuts[bb]);sliceMeasure()});})(b);
+    host.appendChild(btn);
+  }
+}
 function sliceRender(){
   const ovr=$('sliceOverlay');if(!ovr)return;ovr.innerHTML='';
   const word=$('sliceWord');const wr=word.getBoundingClientRect(),h=wr.height;
@@ -1729,11 +1768,18 @@ function sliceRender(){
     ln.style.pointerEvents='none';
     ovr.appendChild(ln);
   }
+  renderSliceGaps();
 }
 function toggleSliceCut(b,on){
   if(b<0||b>=sliceClusters.length-1)return;
   if(on===undefined)on=!sliceCuts[b];
-  if(on){if(!sliceCuts[b]){sliceCuts[b]=true;sliceCutHistory.push({type:'cut',b})}}
+  if(on){
+    if(sliceStutterMode){
+      Object.keys(sliceCuts).forEach(k=>{if(+k!==b)delete sliceCuts[k]});
+      sliceCutHistory=sliceCutHistory.filter(h=>!(h.type==='cut'&&h.b!==b));
+    }
+    if(!sliceCuts[b]){sliceCuts[b]=true;sliceCutHistory.push({type:'cut',b})}
+  }
   else{if(sliceCuts[b]){delete sliceCuts[b];sliceCutHistory=sliceCutHistory.filter(h=>!(h.type==='cut'&&h.b===b))}}
 }
 function placeCut(b,x,y){
@@ -1749,7 +1795,7 @@ function startSlice(e){
   if(!sliceOpen)return;
   const pane=$('slicePane');
   if(pane&&e.target&&!pane.contains(e.target))return;
-  if(e.target&&e.target.closest&&e.target.closest('.controls,header,.slice-hd'))return;
+  if(e.target&&e.target.closest&&e.target.closest('.controls,header,.slice-hd,#sliceGaps,#sliceBolds'))return;
   slicing=true;pts=[];sliceSwipePath=[];swipeBtnDone={};swipeBtnHit=false;sliceDragMode=undefined;
   const p=evtXY(e);lastP=p;sliceStartY=p.y;pts.push({x:p.x,y:p.y});sliceSwipePath.push({x:p.x,y:p.y});
 }
@@ -1823,7 +1869,8 @@ function openSlicePanel(u){
   sliceUnit=u;
   const packed=cutsFromUnit(u);
   sliceClusters=packed.clusters;sliceCuts=packed.cuts;sliceCutHistory=[];slicePanX=0;sliceVariant='lines';
-  slicePartBold={};
+  slicePartBold={};sliceCutsBeforeStutter=null;
+  setSliceStutter(false);
   Object.keys(partBold).forEach(k=>{const pref=String(u.id)+':';if(k.startsWith(pref))slicePartBold[k.slice(pref.length)]=!!partBold[k]});
   sliceOpen=true;pts=[];sliceParticles=[];sliceRings=[];slicing=false;
   const sw=$('sliceWord');if(sw){sw.classList.toggle('bold',!!isBold(u));sw.style.fontWeight=''}
@@ -1840,8 +1887,10 @@ function openSlicePanel(u){
 function onSliceResize(){if(!sliceOpen)return;resizeSliceFx();sliceMeasure()}
 function closeSlicePanel(){
   if(!sliceOpen)return;
-  sliceOpen=false;slicing=false;sliceUnit=null;pts=[];slicePartBold={};
+  sliceOpen=false;slicing=false;sliceUnit=null;pts=[];slicePartBold={};sliceCutsBeforeStutter=null;
+  setSliceStutter(false);
   const sb=$('sliceBolds');if(sb){sb.hidden=true;sb.textContent=''}
+  const gaps=$('sliceGaps');if(gaps)gaps.textContent='';
   dismissTutorial();
   const pane=$('slicePane'),bd=$('sliceBackdrop');pane.classList.remove('show');pane.setAttribute('aria-hidden','true');if(bd){bd.classList.remove('show');bd.setAttribute('aria-hidden','true')}
   const ww=document.querySelector('#slicePane .wordwrap');if(ww)ww.style.transform='';
@@ -1850,8 +1899,56 @@ function closeSlicePanel(){
   removeEventListener('touchstart',startSlice);removeEventListener('touchmove',moveSlice);removeEventListener('touchend',endSlice);
   removeEventListener('resize',onSliceResize);
 }
+const SLICE_PROMPT_NORMAL="החליקו (כמו פרוט נינג'ה) בין האותיות כדי לחתוך";
+const SLICE_PROMPT_STUTTER='בחרו איפה לחתוך — החלק הראשון יקבל שלוש נקודות';
+function setSliceStutter(on){
+  const want=!!on;
+  if(want===sliceStutterMode){
+    const btn=$('sliceStutter');
+    if(btn){btn.setAttribute('aria-pressed',want?'true':'false');btn.classList.toggle('on',want)}
+    const prompt=document.querySelector('#slicePane .prompt');
+    if(prompt)prompt.textContent=want?SLICE_PROMPT_STUTTER:SLICE_PROMPT_NORMAL;
+    const ttl=document.querySelector('#slicePane .slice-hd .ttl');
+    if(ttl)ttl.textContent=want?'חיתוך עם שלוש נקודות':'חיתוך מילה';
+    return;
+  }
+  if(want){
+    sliceCutsBeforeStutter={cuts:{...sliceCuts},history:sliceCutHistory.slice()};
+    const keys=Object.keys(sliceCuts).map(Number).filter(b=>sliceCuts[b]).sort((a,b)=>a-b);
+    let keep=null;
+    for(let i=sliceCutHistory.length-1;i>=0;i--){if(sliceCutHistory[i].type==='cut'&&sliceCuts[sliceCutHistory[i].b]){keep=sliceCutHistory[i].b;break}}
+    if(keep==null&&keys.length)keep=keys[keys.length-1];
+    if(keep!=null){
+      Object.keys(sliceCuts).forEach(k=>{if(+k!==keep)delete sliceCuts[k]});
+      sliceCutHistory=sliceCutHistory.filter(h=>h.type==='cut'&&h.b===keep);
+    }
+  }else if(sliceCutsBeforeStutter){
+    sliceCuts={...sliceCutsBeforeStutter.cuts};
+    sliceCutHistory=sliceCutsBeforeStutter.history.slice();
+    sliceCutsBeforeStutter=null;
+  }
+  sliceStutterMode=want;
+  const btn=$('sliceStutter');
+  if(btn){btn.setAttribute('aria-pressed',want?'true':'false');btn.classList.toggle('on',want)}
+  const prompt=document.querySelector('#slicePane .prompt');
+  if(prompt)prompt.textContent=want?SLICE_PROMPT_STUTTER:SLICE_PROMPT_NORMAL;
+  const ttl=document.querySelector('#slicePane .slice-hd .ttl');
+  if(ttl)ttl.textContent=want?'חיתוך עם שלוש נקודות':'חיתוך מילה';
+  if(sliceOpen)sliceMeasure();
+}
+function confirmStutterSplit(){
+  if(!sliceUnit){closeSlicePanel();return}
+  const u=sliceUnit,text=stutterEditText();
+  if(!text){closeSlicePanel();return}
+  change(()=>{
+    applyTokenText(u,text);
+    dirtyFlags.layout=true;dirtyFlags.cuts=true;dirtyFlags.effects=true;
+  },'edits');
+  closeSlicePanel();
+}
 function confirmSlice(){
   if(!sliceUnit){closeSlicePanel();return}
+  if(sliceStutterMode){confirmStutterSplit();return}
   const u=sliceUnit,offs=clusterOffsets(sliceClusters),pref=String(u.id)+':';
   const next=[];
   Object.keys(sliceCuts).forEach(k=>{const b=+k;if(sliceCuts[b]&&offs[b+1]!=null&&offs[b+1]>0)next.push(pref+offs[b+1])});
@@ -1877,6 +1974,7 @@ function confirmSlice(){
 }
 $('sliceOk').onclick=e=>{e.stopPropagation();confirmSlice()};
 $('sliceCancel').onclick=e=>{e.stopPropagation();closeSlicePanel()};
+$('sliceStutter').onclick=e=>{e.stopPropagation();setSliceStutter(!sliceStutterMode)};
 document.addEventListener('keydown',e=>{if(!sliceOpen)return;if(e.key==='Escape'){e.preventDefault();closeSlicePanel()}});
 
 loadRate();
