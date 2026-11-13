@@ -208,6 +208,8 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 /* Drag: never use CSS scale (it ignores transform-origin and grows from the center, overflowing into neighboring words). Match the sizer's lit/bold font-size and keep live start-aligned inside the reserved slot so both inter-word gaps stay clear. */
 .sub .tok.drag-slot,
 .sub .tokword .tok.drag-slot{overflow:visible}
+.sub .tok.drag-slot .tok-fx.fx-drag{transform-origin:100% 50%}
+.sub .tok-fx.fx-drag .dg-pop{display:inline-block;transform-origin:50% 58%;will-change:transform,opacity}
 .sub .tok.drag-slot .tok-live,
 .sub .tokword .tok.drag-slot .tok-live{
   left:auto;right:auto;inset-inline-start:0;inset-inline-end:auto;top:50%;
@@ -407,7 +409,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794568591';
+const BUILD='1794570398';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -496,7 +498,9 @@ const FX_STRIKE_REPL_AT=0.40;
 const FX_STRIKE_REPL_POP_S=0.22;
 const STRIKE_ICON_SVG='<svg class="fx-strike-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><text x="10" y="15" text-anchor="middle" font-size="14" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor">ס</text><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.7" stroke-dasharray="2.2 1.6" stroke-linecap="round"/></svg>';
 function applyFxIcon(el,fx){if(!el||!fx)return;el.textContent='';if(fx.iconHtml)el.innerHTML=fx.iconHtml;else el.textContent=fx.icon||''}
-const FX_DRAG_GAP_MIN=0.08,FX_DRAG_GAP_MAX=0.15,FX_DRAG_COUNT_DEF=2;
+const FX_DRAG_COUNT_DEF=2;
+/* Drag rhythm: accelerating (golden-ratio) gaps, squeezed into the rest of the word; each new letter pops with a short overshoot and the run gives a small elastic squash. Mirrored 1:1 in the Python renderer (subrender.py). */
+const FX_DRAG_G0=0.12,FX_DRAG_RATIO=0.618,FX_DRAG_GMIN=0.025,FX_DRAG_TMIN=0.16,FX_DRAG_POP_S=0.08,FX_DRAG_SQ_S=0.14;
 const FX_ENTER_S=0.18,SUB_CLEAR_AFTER=0.3;
 const DRAG_ICON_SVG='<svg class="fx-drag-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><text x="3.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor">ש</text><text x="9.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor" opacity=".72">ש</text><text x="15.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor" opacity=".42">ש</text></svg>';
 function letterClusters(text){return clusterize(String(text||''))}
@@ -510,8 +514,36 @@ function normalizeDrag(fx,text){
   return {letters,count,clusters};
 }
 function dragLetterStart(s,e,i,len){const L=Math.max(1,len),dur=(e||0)-(s||0);return (s||0)+(i/L)*dur}
-function dragGap(s,e,t0,count){const remaining=Math.max(0,(e||0)-t0);const raw=remaining/Math.max(1,count);return Math.min(FX_DRAG_GAP_MAX,Math.max(FX_DRAG_GAP_MIN,raw))}
-function dragShownExtras(s,e,i,len,count,t){const t0=dragLetterStart(s,e,i,len);if((t||0)+0.02<t0)return 0;const gap=dragGap(s,e,t0,count);return Math.min(count,Math.max(0,Math.floor(((t||0)+0.02-t0)/gap)))}
+function dragTimes(s,e,i,len,count){
+  const t0=dragLetterStart(s,e,i,len),g=[];let N=0;
+  for(let k=0;k<count;k++){const v=Math.max(FX_DRAG_GMIN,FX_DRAG_G0*Math.pow(FX_DRAG_RATIO,k));g.push(v);N+=v}
+  const avail=Math.max(0,(e||0)-t0),T=Math.min(N,Math.max(avail,FX_DRAG_TMIN)),k2=N>0?T/N:1,out=[];let acc=0;
+  for(let k=0;k<count;k++){acc+=g[k]*k2;out.push(t0+acc)}
+  return out;
+}
+function dragShownExtras(s,e,i,len,count,t){return dragTimes(s,e,i,len,count).filter(x=>(t||0)+0.02>=x).length}
+function fxSmooth(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)}
+function fxKf(x,pts){if(x<=pts[0][0])return pts[0][1];for(let j=1;j<pts.length;j++){const [t0,v0]=pts[j-1],[t1,v1]=pts[j];if(x<=t1){const u=t1>t0?(x-t0)/(t1-t0):1;return v0+(v1-v0)*fxSmooth(u)}}return pts[pts.length-1][1]}
+function dragPopScale(u){return fxKf(u,[[0,0.35],[0.6,1.18],[1,1]])}
+function dragPopAlpha(u){return Math.min(1,Math.max(0,u/0.4))}
+function dragSquash(age){if(age==null||age<0||age>=FX_DRAG_SQ_S)return 0;return fxKf(age/FX_DRAG_SQ_S,[[0,0],[0.3,1],[1,0]])}
+/* Live drag HTML: newly added letters pop in; returns {html,sq} where sq (0..1) drives the elastic squash of the whole run. */
+function dragLiveHtml(text,letters,count,s,e,t){
+  const cl=letterClusters(text),marks=new Set(letters||[]);let html='',run='',last=null;
+  const flush=()=>{if(run){html+=esc(run);run=''}};
+  for(let i=0;i<cl.length;i++){
+    run+=cl[i];
+    if(!marks.has(i))continue;
+    for(const x of dragTimes(s,e,i,cl.length,count)){
+      const age=(t||0)+0.02-x;if(age<0)break;
+      if(last==null||age<last)last=age;
+      if(age<FX_DRAG_POP_S){const u=age/FX_DRAG_POP_S;flush();html+='<span class="dg-pop" style="transform:scale('+dragPopScale(u).toFixed(3)+');opacity:'+dragPopAlpha(u).toFixed(3)+'">'+esc(cl[i])+'</span>'}
+      else run+=cl[i];
+    }
+  }
+  flush();
+  return {html,sq:dragSquash(last)};
+}
 function dragBuild(text,letters,count,s,e,t,final){
   const cl=letterClusters(text),marks=new Set(letters||[]),out=[];
   for(let i=0;i<cl.length;i++){
@@ -1833,6 +1865,7 @@ function renderSub(u,pt,t){
       const replIn=typ==='strike'&&hasRepl&&t+0.02>=replAt;
       const replDone=typ==='strike'&&hasRepl&&t>=replAt+FX_STRIKE_REPL_POP_S;
       let inner=esc(it.pt.text);
+      let dragSq=0;
       let sizer=esc(it.pt.text), sizerCls='tok-sizer';
       if(typ==='hidden') inner=highlightLetters(it.pt.text, fx.text2||'');
       else if(typ==='typewriter') inner=typewriterHtml(it.pt.text,it.pt,t);
@@ -1845,7 +1878,9 @@ function renderSub(u,pt,t){
         if(hasRepl){sizerCls+=' sz-row';sizer='<span class="sz-a">'+esc(it.pt.text)+'</span><span class="sz-gap"></span><span class="sz-b">'+esc(fx.text2)+'</span>'}
       }else if(typ==='drag'){
         const d=normalizeDrag(fx,it.pt.text);
-        inner=esc(dragBuild(it.pt.text,d.letters,d.count,it.pt.s,it.pt.e,t,false));
+        const live=dragLiveHtml(it.pt.text,d.letters,d.count,it.pt.s,it.pt.e,t);
+        inner=live.html;
+        if(live.sq>0.001)dragSq=live.sq;
         sizer=esc(dragBuild(it.pt.text,d.letters,d.count,it.pt.s,it.pt.e,t,true));
       }
       const fxCls=typ?' fx fx-'+typ:'';
@@ -1863,7 +1898,7 @@ function renderSub(u,pt,t){
       if(popping)vars.push('--fx-repl-t:'+(-(t-replAt)).toFixed(3)+'s');
       if(entering)vars.push('--fx-enter-t:'+(-(t-(it.pt.s||0))).toFixed(3)+'s');
       const st=vars.length?' style="'+vars.join(';')+'"':'';
-      html+='<span class="'+cls+'"'+st+'><span class="'+sizerCls+'" aria-hidden="true">'+sizer+'</span><span class="tok-live"><span class="tok-enter"><span class="tok-fx'+(fxCls||'')+'">'+inner+'</span></span></span></span>';
+      html+='<span class="'+cls+'"'+st+'><span class="'+sizerCls+'" aria-hidden="true">'+sizer+'</span><span class="tok-live"><span class="tok-enter"><span class="tok-fx'+(fxCls||'')+'"'+(dragSq?' style="transform:scale('+(1+0.04*dragSq).toFixed(3)+','+(1-0.06*dragSq).toFixed(3)+')"':'')+'>'+inner+'</span></span></span></span>';
     });
     html+='</span>';
   });
