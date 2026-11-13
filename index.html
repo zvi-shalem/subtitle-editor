@@ -205,8 +205,12 @@ video{width:100%;height:100%;display:block;object-fit:contain}
   72%{transform:translate(1px,1px)}
 }
 #subFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
-.tok .fx-strike{text-decoration:line-through;text-decoration-thickness:2px}
-.tok .fx-repl{margin-inline-start:.35em;text-decoration:none;opacity:.95}
+.tok .fx-strike{text-decoration:none}
+.tok .fx-strike-word{position:relative;display:inline-block}
+.tok.struck .fx-strike-word::after{content:'';position:absolute;left:0;right:0;top:50%;height:clamp(1.5px,.06em,3px);background:rgba(255,110,110,.85);transform:translateY(-50%) scaleX(1);transform-origin:right center;pointer-events:none;border-radius:99px;z-index:1}
+.tok.struck-in .fx-strike-word::after{animation:fx-strike-in .15s ease-out forwards}
+@keyframes fx-strike-in{from{transform:translateY(-50%) scaleX(0)}to{transform:translateY(-50%) scaleX(1)}}
+.tok .fx-repl{margin-inline-start:.35em;text-decoration:none;opacity:.95;position:relative}
 .tok .fx-morph .from{animation:fx-morph-out .45s ease-in forwards}
 .tok .fx-morph .to{animation:fx-morph-in .45s ease-out forwards;margin-inline-start:.15em}
 @keyframes fx-morph-out{to{opacity:.35;transform:scale(.92)}}
@@ -313,7 +317,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794564735';
+const BUILD='1794564894';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -1481,12 +1485,12 @@ function renderSub(u,pt,t){
         if(on) inner='<span class="from">'+esc(it.pt.text)+'</span><span class="to">'+esc(fx.text2)+'</span>';
         else inner=esc(it.pt.text);
       }else if(typ==='strike'){
-        inner=esc(it.pt.text)+(fx.text2?'<span class="fx-repl">'+esc(fx.text2)+'</span>':'');
+        inner='<span class="fx-strike-word">'+esc(it.pt.text)+'</span>'+(fx.text2?'<span class="fx-repl">'+esc(fx.text2)+'</span>':'');
       }
       const fxCls=typ?' fx fx-'+typ:'';
       const started=t+0.02>=it.pt.s;
       const boldish=isPartBold(it.u,it.pt.off);
-      const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'')+(typ==='ambush'&&on?' ambush-in':'');
+      const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'')+(typ==='ambush'&&on?' ambush-in':'')+(typ==='strike'&&started?' struck':'')+(typ==='strike'&&on?' struck-in':'');
       html+='<span class="'+cls+'"><span class="tok-sizer" aria-hidden="true">'+esc(it.pt.text)+'</span><span class="tok-live"><span class="tok-fx'+(fxCls||'')+'">'+inner+'</span></span></span>';
     });
     html+='</span>';
