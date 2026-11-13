@@ -51,6 +51,10 @@ header h1{font-size:16px;margin:0;flex:1 1 auto;min-width:0;white-space:nowrap;o
 .w.edited{box-shadow:inset 0 -2px 0 rgba(255,204,51,.7)}
 .w.hidden-w{opacity:.55}
 .w.hidden-w .ghost{font:inherit;font-size:14px;color:var(--mut);padding:4px 6px;background:none;border:0}
+.w.blank-w{opacity:1}
+.w.blank-w .empty-chip{font:inherit;font-size:13px;font-weight:800;color:#ffb3b3;background:#4a1a1f;border:1.5px dashed #e05555;border-radius:8px;padding:3px 8px;line-height:1.2;margin:1px 2px}
+.empty-banner{position:sticky;top:var(--header-h);z-index:9;display:block;width:100%;box-sizing:border-box;background:#4a1a1f;color:#ffd0d0;border:1.5px dashed #e05555;border-radius:10px;margin:0 0 8px;padding:8px 12px;font:inherit;font-size:14px;font-weight:800;text-align:center;cursor:pointer}
+.sheet .sactions .remove{background:#4a1a1f;color:#ffb3b3;font:inherit;font-weight:800;border:1px solid #e05555;border-radius:8px;padding:8px 14px}
 .bb{font:inherit;font-size:10px;font-weight:800;width:17px;height:17px;padding:0;border-radius:4px;border:1px solid #3a4150;background:#20242d;color:var(--mut);margin-inline-start:1px;line-height:15px}
 .w.marked .bb,.part.marked .bb{background:var(--acc);color:#111;border-color:var(--acc)}
 .gap{font:inherit;min-width:34px;height:34px;margin:0 4px;padding:0 5px;border:1.5px solid #3d7fd6;background:#16294a;color:#9cc8ff;font-size:17px;font-weight:800;border-radius:17px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
@@ -173,6 +177,12 @@ video{width:100%;height:100%;display:block;object-fit:contain}
   70%{transform:scale(.98);filter:brightness(1.08)}
   100%{transform:scale(1);filter:none}
 }
+.tok .fx-ambush{transform-origin:center baseline}
+.tok.on.ambush-in .tok-fx.fx-ambush{animation:fx-ambush-in .2s ease-out both}
+@keyframes fx-ambush-in{
+  0%{opacity:0;transform:scale(1.27)}
+  100%{opacity:1;transform:scale(1)}
+}
 .vwrap.exploding{animation:vwrap-boom .36s ease-out}
 @keyframes vwrap-boom{
   0%,100%{transform:translate(0,0)}
@@ -257,7 +267,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
   <button class="hbtn icon" id="cutmode" aria-label="מצב עריכת חיתוכים" title="מצב עריכת חיתוכים" aria-pressed="false">✂️</button>
   <button class="hbtn icon" id="undo" type="button" aria-label="בטל" title="בטל">↶</button>
   <button class="hbtn submit" id="submit" type="button">הגש</button>
-  <div class="help-pop" id="helpPop" hidden>לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה עורכת טקסט ואפקט · <b>B</b> סימון הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · כל שינוי נשמר</div>
+  <div class="help-pop" id="helpPop" hidden>לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה עורכת טקסט ואפקט · <b>🗑</b> הסר מילה · <b>B</b> סימון הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · כל שינוי נשמר</div>
 </header>
 <div id="lines"></div>
 <div class="vwrap" id="vwrap" data-caption="outline"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><canvas id="subFx" aria-hidden="true"></canvas><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
@@ -292,7 +302,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794533682';
+const BUILD='1794563783';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -304,7 +314,7 @@ const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'applicatio
 const RATES=[1,1.5,2,2.5];
 const $=id=>document.getElementById(id);
 const v=$('v'),linesEl=$('lines'),statusEl=$('status');
-let words=[],breaks=new Set(),bold=new Set(),notes={},wordCuts=[],cutBreaks=new Set(),silences=new Set(),silenceText={},wordEdits={},effects={},partBold={};
+let words=[],breaks=new Set(),bold=new Set(),notes={},wordCuts=[],cutBreaks=new Set(),silences=new Set(),silenceText={},wordEdits={},removed={},effects={},partBold={};
 let undoStack=[],saveTimer=null,saving=false,queued=false;
 let dirtyFlags={layout:false,notes:false,cuts:false,silences:false,edits:false,effects:false};
 let nowId=null,nowOff=0,unitEls={},partEls={},unitsCache=[],linesCache=[];
@@ -365,7 +375,8 @@ const FX=[
   {type:'shake',icon:'〰️',label:'רעד',need:false,field:''},
   {type:'typewriter',icon:'⌨️',label:'הקלדה',need:false,field:''},
   {type:'whisper',icon:'🤫',label:'לחישה',need:false,field:''},
-  {type:'pop',icon:'💥',label:'פיצוץ',need:false,field:''}
+  {type:'pop',icon:'💥',label:'פיצוץ',need:false,field:''},
+  {type:'ambush',icon:'🥷',label:'מילה במארב',need:false,field:''}
 ];
 function fxMeta(type){return FX.find(x=>x.type===type)||FX[0]}
 function effectOf(u){if(!u)return null;if(cutsFor(u).length)return null;return effects[String(u.id)]||effects[String(u.orig)]||null}
@@ -389,12 +400,40 @@ function prunePartBold(u){
 function allPartsBold(u){return partTimes(u).every(p=>isPartBold(u,p.off))}
 
 function editString(i){const k=String(i);return hasOwn(wordEdits,k)?wordEdits[k]:(words[i]?words[i].w:'')}
+function isRemoved(i){return !!removed[String(i)]}
+function isBlankEdit(i){const k=String(i);return hasOwn(wordEdits,k)&&!String(wordEdits[k]).trim()}
+function parseRemoved(src){
+  const o={};
+  if(Array.isArray(src))src.forEach(i=>{if(i!=null)o[String(i)]=true});
+  else if(src&&typeof src==='object')Object.keys(src).forEach(k=>{if(src[k])o[String(k)]=true});
+  return o;
+}
+function blankWordOrigs(){
+  const out=[];
+  for(let i=0;i<words.length;i++){if(!isRemoved(i)&&isBlankEdit(i))out.push(i)}
+  return out;
+}
+let blankJump=0;
+function jumpToBlankWord(){
+  const ids=blankWordOrigs();
+  if(!ids.length)return;
+  const i=ids[blankJump%ids.length];
+  blankJump=(blankJump+1)%Math.max(1,ids.length);
+  const u=unitsCache.find(x=>x.orig===i&&!x.removed)||unitsCache.find(x=>x.orig===i);
+  const el=(u&&(unitEls[u.id]||partEls[u.id+':0']))||document.querySelector('.w.blank-w,.empty-chip');
+  if(el){
+    el.scrollIntoView({block:'center',behavior:'smooth'});
+    const shell=el.closest?el.closest('.w')||el:el;
+    shell.classList.add('now');
+    setTimeout(()=>shell.classList.remove('now'),1200);
+  }
+}
 function tokensOf(i){
   const has=hasOwn(wordEdits,String(i));
   const raw=has?wordEdits[String(i)]:(words[i]?words[i].w:'');
-  if(has && raw==='')return [];
+  if(has && !String(raw).trim())return [];
   if(!has)return [words[i]?words[i].w:''];
-  const t=raw.trim();return t?t.split(/\s+/).filter(Boolean):[];
+  const t=String(raw).trim();return t?t.split(/\s+/).filter(Boolean):[];
 }
 function splitTiming(s,e,tokens){
   const lens=tokens.map(t=>[...t].length);
@@ -406,7 +445,8 @@ function getUnits(){
   const out=[];
   for(let i=0;i<words.length;i++){
     const orig=words[i], has=hasOwn(wordEdits,String(i)), raw=has?wordEdits[String(i)]:orig.w;
-    if(has && raw===''){out.push({orig:i,sub:null,id:i,text:'',s:orig.s,e:orig.e,hidden:true,edited:true,lastSub:true,nsub:0});continue}
+    if(isRemoved(i)){out.push({orig:i,sub:null,id:i,text:'',s:orig.s,e:orig.e,hidden:true,removed:true,edited:true,lastSub:true,nsub:0});continue}
+    if(isBlankEdit(i)){out.push({orig:i,sub:null,id:i,text:'',s:orig.s,e:orig.e,hidden:true,blank:true,edited:true,lastSub:true,nsub:0});continue}
     const toks=tokensOf(i);
     if(!has || toks.length<=1){
       const t=has?(toks[0]||raw):orig.w;
@@ -512,6 +552,7 @@ async function load(){
     silences=new Set(Array.isArray(st.silences)?st.silences:[]);
     silenceText=(st.silenceText&&typeof st.silenceText==='object'&&!Array.isArray(st.silenceText))?{...st.silenceText}:{};
     wordEdits=(st.wordEdits&&typeof st.wordEdits==='object'&&!Array.isArray(st.wordEdits))?{...st.wordEdits}:{};
+    removed=parseRemoved(st.removed);
     effects=(st.effects&&typeof st.effects==='object'&&!Array.isArray(st.effects))?cloneObj(st.effects):{};
     partBold=(st.partBold&&typeof st.partBold==='object'&&!Array.isArray(st.partBold))?cloneObj(st.partBold):{};
     applyCaptionStyle(CAPTION_STYLES.includes(st.captionStyle)?st.captionStyle:readStoredCaptionStyle(),false);
@@ -521,7 +562,7 @@ async function load(){
   }catch(e){setStatus('שגיאה בטעינה',true);linesEl.innerHTML='<div class="err-box">לא הצלחתי לטעון. נסה לרענן.</div>'}
 }
 
-function snapshot(){undoStack.push({b:[...breaks],o:[...bold],n:cloneNotes(notes),c:[...wordCuts],cb:[...cutBreaks],s:[...silences],st:cloneObj(silenceText),e:{...wordEdits},f:cloneObj(effects),pb:cloneObj(partBold)});if(undoStack.length>200)undoStack.shift()}
+function snapshot(){undoStack.push({b:[...breaks],o:[...bold],n:cloneNotes(notes),c:[...wordCuts],cb:[...cutBreaks],s:[...silences],st:cloneObj(silenceText),e:{...wordEdits},rm:{...removed},f:cloneObj(effects),pb:cloneObj(partBold)});if(undoStack.length>200)undoStack.shift()}
 function change(fn,kind){snapshot();fn();if(kind)dirtyFlags[kind]=true;render(true);queueSave()}
 
 function hideSnack(){clearTimeout(snackTimer);snackTimer=null;const s=$('snack');if(s)s.remove()}
@@ -609,6 +650,17 @@ function openNoteMenu(btn,key){
   });
   btn.parentElement.appendChild(menu);
 }
+function focusCaretEnd(el){
+  if(!el)return;
+  const place=()=>{
+    try{el.focus({preventScroll:true})}catch(e){try{el.focus()}catch(e2){}}
+    const len=(el.value||'').length;
+    try{if(typeof el.setSelectionRange==='function')el.setSelectionRange(len,len)}catch(e){}
+  };
+  place();
+  setTimeout(place,0);
+  setTimeout(place,50);
+}
 function openWordEdit(unit){
   closeNoteMenu();closeWordEdit();
   const key=String(unit.orig);
@@ -619,7 +671,7 @@ function openWordEdit(unit){
   const h=document.createElement('h3');h.textContent='עריכת מילה';
   const row=document.createElement('div');row.className='srow';
   const inp=document.createElement('input');inp.type='text';inp.dir='rtl';inp.value=editString(unit.orig);inp.setAttribute('aria-label','טקסט המילה');
-  const syncWarn=()=>{const empty=inp.value==='';inp.classList.toggle('warn',empty);inp.title=empty?'טקסט ריק יסתיר את המילה':'טקסט המילה'};
+  const syncWarn=()=>{const empty=!inp.value.trim();inp.classList.toggle('warn',empty);inp.title=empty?'טקסט ריק יוצג כ״למחוק״ עד שתסירו את המילה':'טקסט המילה'};
   syncWarn();inp.addEventListener('input',syncWarn);
   row.appendChild(inp);
   const canCut=!unit.hidden && !unit.silence && unit.text && [...unit.text].length>=2;
@@ -647,7 +699,7 @@ function openWordEdit(unit){
     FX.forEach(fx=>{
       const c=document.createElement('button');c.type='button';c.className='chip'+(fx.type===chosen?' on':'');
       c.textContent=fx.icon+' '+fx.label;c.title=fx.label;c.setAttribute('aria-label',fx.label);c.dataset.type=fx.type;
-      c.onclick=e=>{e.stopPropagation();chosen=fx.type;chips.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x.dataset.type===chosen));syncField();if(metaNeeds(fx))setTimeout(()=>inp2.focus(),0)};
+      c.onclick=e=>{e.stopPropagation();chosen=fx.type;chips.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x.dataset.type===chosen));syncField();if(metaNeeds(fx))setTimeout(()=>focusCaretEnd(inp2),0)};
       chips.appendChild(c);
     });
   }
@@ -670,7 +722,14 @@ function openWordEdit(unit){
   };
   const ok=document.createElement('button');ok.className='ok';ok.textContent='שמירה';ok.onclick=e=>{e.stopPropagation();save()};
   const cancel=document.createElement('button');cancel.className='cancel';cancel.textContent='ביטול';cancel.onclick=e=>{e.stopPropagation();closeWordEdit()};
-  actions.append(ok,cancel);
+  const del=document.createElement('button');del.type='button';del.className='remove';del.textContent='🗑 הסר';
+  del.title='הסר מילה';del.setAttribute('aria-label','הסר מילה');
+  del.onclick=e=>{
+    e.stopPropagation();
+    closeWordEdit();
+    change(()=>{removed[key]=true;dirtyFlags.layout=true},'edits');
+  };
+  actions.append(ok,cancel,del);
   if(cutLocked)sheet.append(h,row,blocked,actions);
   else sheet.append(h,row,chips,fieldWrap,actions);
   bg.addEventListener('click',()=>closeWordEdit());
@@ -678,7 +737,7 @@ function openWordEdit(unit){
   inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save()}if(e.key==='Escape'){e.preventDefault();closeWordEdit()}};
   inp2.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save()}if(e.key==='Escape'){e.preventDefault();closeWordEdit()}};
   document.body.append(bg,sheet);
-  setTimeout(()=>{inp.focus();inp.select()},0);
+  setTimeout(()=>focusCaretEnd(inp),0);
 }
 
 function layoutChrome(){
@@ -729,9 +788,14 @@ function makeWordShell(u){
   const hasCuts=cutsFor(u).length>0;
   const fx=effectOf(u);
   const wordMarked=hasCuts?allPartsBold(u):isBold(u);
-  w.className='w'+(wordMarked?' marked':'')+(hasCuts?' cutword':'')+(u.edited?' edited':'')+(u.hidden?' hidden-w':'')+(fx&&fx.type&&fx.type!=='none'?' has-fx fx-'+fx.type:'');
+  w.className='w'+(wordMarked?' marked':'')+(hasCuts?' cutword':'')+(u.edited?' edited':'')+(u.blank?' blank-w':'')+(u.hidden&&!u.blank?' hidden-w':'')+(fx&&fx.type&&fx.type!=='none'?' has-fx fx-'+fx.type:'');
   w.dataset.id=String(u.id);
-  if(u.hidden){
+  if(u.blank){
+    const g=document.createElement('button');g.className='empty-chip';g.textContent='למחוק';
+    g.dataset.act='seek';g.dataset.id=String(u.id);g.dataset.off='0';
+    g.title='מילה ריקה – לחץ לחיצה ארוכה והסר';g.setAttribute('aria-label','מילה ריקה – לחץ לחיצה ארוכה והסר');
+    w.appendChild(g);partEls[u.id+':0']=g;
+  }else if(u.hidden && !u.removed){
     const g=document.createElement('button');g.className='ghost';g.textContent='—';
     g.dataset.act='seek';g.dataset.id=String(u.id);g.dataset.off='0';
     g.title='מילה מוסתרת — לחץ לחיצה ארוכה לעריכה';g.setAttribute('aria-label','מילה מוסתרת — לחץ לחיצה ארוכה לעריכה');
@@ -754,17 +818,31 @@ function render(keep){
   linesEl.textContent='';unitEls={};partEls={};
   const raw=getLines();const pack=attachSilenceLines(raw);unitsCache=pack.units;linesCache=pack.lines;
   const frag=document.createDocumentFragment();
+  const blanks=blankWordOrigs();
+  if(blanks.length){
+    const ban=document.createElement('button');ban.type='button';ban.className='empty-banner';ban.id='emptyBanner';
+    const n=blanks.length;
+    ban.textContent=n===1?'יש מילה ריקה אחת למחוק':'יש '+n+' מילים ריקות למחוק';
+    ban.title='מעבר למילה הריקה הבאה';ban.setAttribute('aria-label',ban.textContent);
+    ban.onclick=e=>{e.stopPropagation();jumpToBlankWord()};
+    frag.appendChild(ban);
+  }
+  let visLine=0;
   raw.lines.forEach((ln,n)=>{
+    const visible=ln.items.some(it=>it.u&&!it.u.removed);
+    if(!visible)return;
+    visLine++;
     const line=document.createElement('div');line.className='line';line.dataset.key=String(ln.key);line.dataset.first=String(ln.key);
-    const num=document.createElement('span');num.className='num';num.textContent=n+1;line.appendChild(num);
+    const num=document.createElement('span');num.className='num';num.textContent=visLine;line.appendChild(num);
     const nb=document.createElement('button');nb.className='nbtn';
     const note=notes[String(ln.key)];
     if(note&&note.type){nb.classList.add(note.type);const dot=document.createElement('span');dot.className='dot';nb.appendChild(dot)}
     nb.appendChild(document.createTextNode('💬'));
     const nt=noteTitle(note);nb.title=nt;nb.setAttribute('aria-label',nt);nb.dataset.act='note';nb.dataset.key=String(ln.key);
     line.appendChild(nb);
-    if(n>0){
-      const prev=raw.lines[n-1];
+    if(visLine>1){
+      let prev=null;
+      for(let i=n-1;i>=0;i--){if(raw.lines[i].items.some(it=>it.u&&!it.u.removed)){prev=raw.lines[i];break}}
       if(prev&&prev.end){
         const x=document.createElement('button');x.className='x';x.textContent='×';x.dataset.act='merge';x.dataset.kind=prev.end.type;x.dataset.key=String(prev.end.key);
         x.title='חיבור לשורה הקודמת';x.setAttribute('aria-label','חיבור לשורה הקודמת');line.appendChild(x);
@@ -774,6 +852,7 @@ function render(keep){
 
     let curW=null,curId=null,prevU=null;
     ln.items.forEach((it,ii)=>{
+      if(it.u.removed)return;
       if(curId!==it.u.id){
         if(curW&&curW._bb)curW.appendChild(curW._bb);
         if(curW&&prevU){
@@ -904,7 +983,7 @@ applyCaptionStyle(readStoredCaptionStyle(),false);
 $('cutmode').onclick=()=>{cutMode=!cutMode;$('cutmode').setAttribute('aria-pressed',cutMode?'true':'false');document.body.classList.toggle('cutmode',cutMode);render(true)};
 $('undo').onclick=()=>{
   hideSnack();const s=undoStack.pop();if(!s)return;
-  breaks=new Set(s.b);bold=new Set(s.o);notes=cloneNotes(s.n);wordCuts=[...s.c];cutBreaks=new Set(s.cb);silences=new Set(s.s);silenceText=cloneObj(s.st||{});wordEdits={...s.e};effects=cloneObj(s.f);partBold=cloneObj(s.pb||{});
+  breaks=new Set(s.b);bold=new Set(s.o);notes=cloneNotes(s.n);wordCuts=[...s.c];cutBreaks=new Set(s.cb);silences=new Set(s.s);silenceText=cloneObj(s.st||{});wordEdits={...s.e};removed=parseRemoved(s.rm);effects=cloneObj(s.f);partBold=cloneObj(s.pb||{});
   dirtyFlags={layout:true,notes:true,cuts:true,silences:true,edits:true,effects:true,partBold:true};render(true);queueSave();
 };
 
@@ -916,6 +995,7 @@ function exportState(){
   if(silences.size)o.silences=sortMixed(silences);
   if(Object.keys(silenceText).length)o.silenceText={...silenceText};
   if(Object.keys(wordEdits).length)o.wordEdits={...wordEdits};
+  if(Object.keys(removed).length)o.removed={...removed};
   if(Object.keys(effects).length)o.effects=cloneObj(effects);
   if(Object.keys(partBold).length)o.partBold=cloneObj(partBold);
   o.captionStyle=captionStyle;
@@ -945,7 +1025,7 @@ async function save(){
       delete merged.cuts;
     }
     if(flags.silences){if(silences.size)merged.silences=sortMixed(silences);else delete merged.silences;if(Object.keys(silenceText).length)merged.silenceText={...silenceText};else delete merged.silenceText}
-    if(flags.edits){if(Object.keys(wordEdits).length)merged.wordEdits={...wordEdits};else delete merged.wordEdits}
+    if(flags.edits){if(Object.keys(wordEdits).length)merged.wordEdits={...wordEdits};else delete merged.wordEdits;if(Object.keys(removed).length)merged.removed={...removed};else delete merged.removed}
     if(flags.effects){if(Object.keys(effects).length)merged.effects=cloneObj(effects);else delete merged.effects}
     if(flags.partBold){if(Object.keys(partBold).length)merged.partBold=cloneObj(partBold);else delete merged.partBold}
     if(flags.captionStyle){if(captionStyle)merged.captionStyle=captionStyle;else delete merged.captionStyle}
@@ -961,7 +1041,7 @@ async function save(){
     if(!flags.notes && !dirtyFlags.notes){notes=(server.notes&&typeof server.notes==='object'&&!Array.isArray(server.notes))?cloneNotes(server.notes):{};needRender=true}
     if(!flags.cuts && !dirtyFlags.cuts){wordCuts=Array.isArray(server.wordCuts)?[...server.wordCuts]:(Array.isArray(server.cuts)?[...server.cuts]:[]);cutBreaks=new Set(Array.isArray(server.cutBreaks)?server.cutBreaks:[]);needRender=true}
     if(!flags.silences && !dirtyFlags.silences){silences=new Set(Array.isArray(server.silences)?server.silences:[]);silenceText=(server.silenceText&&typeof server.silenceText==='object'&&!Array.isArray(server.silenceText))?{...server.silenceText}:{};needRender=true}
-    if(!flags.edits && !dirtyFlags.edits){wordEdits=(server.wordEdits&&typeof server.wordEdits==='object'&&!Array.isArray(server.wordEdits))?{...server.wordEdits}:{};needRender=true}
+    if(!flags.edits && !dirtyFlags.edits){wordEdits=(server.wordEdits&&typeof server.wordEdits==='object'&&!Array.isArray(server.wordEdits))?{...server.wordEdits}:{};removed=parseRemoved(server.removed);needRender=true}
     if(!flags.effects && !dirtyFlags.effects){effects=(server.effects&&typeof server.effects==='object'&&!Array.isArray(server.effects))?cloneObj(server.effects):{};needRender=true}
     if(!flags.partBold && !dirtyFlags.partBold){partBold=(server.partBold&&typeof server.partBold==='object'&&!Array.isArray(server.partBold))?cloneObj(server.partBold):{};needRender=true}
     if(!flags.captionStyle && !dirtyFlags.captionStyle && CAPTION_STYLES.includes(server.captionStyle) && server.captionStyle!==captionStyle){applyCaptionStyle(server.captionStyle,false);needRender=true}
@@ -976,14 +1056,23 @@ async function save(){
 }
 window.addEventListener('beforeunload',e=>{if(queued||anyDirty(dirtyFlags)){e.preventDefault();e.returnValue=''}});
 
-function cuePart(it){return {text:it.pt.text,start:it.pt.s,end:it.pt.e,bold:isPartBold(it.u,it.pt.off),id:it.u.id,off:it.pt.off}}
+function cuePart(it){
+  const o={text:it.pt.text,start:it.pt.s,end:it.pt.e,bold:isPartBold(it.u,it.pt.off),id:it.u.id,off:it.pt.off};
+  const fx=effectOf(it.u);
+  if(fx&&fx.type&&fx.type!=='none'){o.effect=fx.type;if(fx.text2)o.effectText=fx.text2}
+  return o;
+}
 function cueWordsFromLine(ln){
   const words=[];
   ln.items.forEach(it=>{
-    if(it.u.hidden||!it.pt||!it.pt.text)return;
+    if(it.u.hidden||it.u.removed||it.u.blank||!it.pt||!it.pt.text)return;
     const seg=cuePart(it), prev=words[words.length-1];
     if(prev&&prev.id===seg.id){prev.parts.push(seg);prev.text+=seg.text;prev.end=seg.end;prev.bold=prev.parts.every(p=>p.bold)}
-    else words.push({text:seg.text,start:seg.start,end:seg.end,bold:seg.bold,id:seg.id,off:seg.off,parts:[seg]});
+    else{
+      const w={text:seg.text,start:seg.start,end:seg.end,bold:seg.bold,id:seg.id,off:seg.off,parts:[seg]};
+      if(seg.effect){w.effect=seg.effect;if(seg.effectText)w.effectText=seg.effectText}
+      words.push(w);
+    }
   });
   return words;
 }
@@ -1115,12 +1204,16 @@ let lastSubHtml='';
 function renderSub(u,pt,t){
   const sub=$('sub');
   const clearSub=()=>{if(lastSubHtml!==''){sub.textContent='';lastSubHtml=''}};
-  if(!u||u.hidden){clearSub();return}
+  if(!u){clearSub();return}
   const ln=lineOf(u,pt);if(!ln){clearSub();return}
   if(t>(ln.items[ln.items.length-1].pt.e)+0.8){clearSub();return}
   const groups=[];
   ln.items.forEach(it=>{
-    if(it.u.hidden||!it.pt||!it.pt.text)return;
+    if(it.u.hidden||it.u.removed||it.u.blank||!it.pt||!it.pt.text)return;
+    const fx=effectOf(it.u);
+    const typ=fx&&fx.type&&fx.type!=='none'?fx.type:'';
+    const started=t+0.02>=it.pt.s;
+    if(typ==='ambush' && !started)return;
     const g=groups[groups.length-1];
     if(g&&g.u.id===it.u.id)g.items.push(it);
     else groups.push({u:it.u,items:[it]});
@@ -1144,7 +1237,7 @@ function renderSub(u,pt,t){
       const fxCls=typ?' fx fx-'+typ:'';
       const started=t+0.02>=it.pt.s;
       const boldish=isPartBold(it.u,it.pt.off);
-      const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'');
+      const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'')+(typ==='ambush'&&on?' ambush-in':'');
       html+='<span class="'+cls+'"><span class="tok-sizer" aria-hidden="true">'+esc(it.pt.text)+'</span><span class="tok-live"><span class="tok-fx'+(fxCls||'')+'">'+inner+'</span></span></span>';
     });
     html+='</span>';
