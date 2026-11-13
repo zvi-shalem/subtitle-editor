@@ -170,6 +170,22 @@ video{width:100%;height:100%;display:block;object-fit:contain}
 .wpop .slabel{font-size:11px;color:var(--mut);margin:0 0 3px}
 .wpop .fx-field{width:100%;box-sizing:border-box;display:block}
 .wpop .fx-field input[type=text]{width:100%;max-width:100%;display:block;box-sizing:border-box;flex:none}
+.wpop .drag-pick{width:100%;box-sizing:border-box}
+.wpop .drag-letters{display:flex;flex-wrap:wrap;gap:4px;direction:rtl;justify-content:flex-start;margin:0 0 8px}
+.wpop .drag-letter{font:inherit;font-size:18px;font-weight:700;width:32px;height:32px;padding:0;border:1px solid #3a4150;border-radius:10px;background:#20242d;color:var(--fg);display:inline-flex;align-items:center;justify-content:center;line-height:1;cursor:pointer}
+.wpop .drag-letter.on{background:var(--acc);color:#111;border-color:var(--acc);box-shadow:0 0 0 2px #ffcc3344}
+.wpop .drag-count{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.wpop .drag-count .slabel{margin:0;flex:0 0 auto}
+.wpop .drag-step{display:inline-flex;align-items:center;gap:0;background:#12151b;border:1px solid #3a4150;border-radius:999px;overflow:hidden;flex:0 0 auto;direction:ltr}
+.wpop .drag-step button{font:inherit;font-weight:800;border:0;background:transparent;color:var(--fg);min-width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.wpop .drag-step .drag-num{min-width:34px;background:#20242d}
+.wpop .drag-step .drag-num.open{background:var(--acc);color:#111}
+.wpop .drag-bubbles{display:flex;gap:3px;flex-wrap:wrap;width:100%;padding:6px 0 0;direction:ltr;justify-content:center}
+.wpop .drag-bubbles[hidden]{display:none}
+.wpop .drag-bubbles button{font:inherit;font-size:13px;font-weight:800;width:26px;height:26px;padding:0;border:1px solid #3a4150;border-radius:50%;background:#20242d;color:var(--fg)}
+.wpop .drag-bubbles button.on{background:var(--acc);color:#111;border-color:var(--acc)}
+.wpop .drag-hint{font-size:11px;color:var(--mut);margin:2px 0 6px}
+.sub .tok.drag-slot .tok-live,.sub .tokword .tok.drag-slot .tok-live{left:auto;right:auto;inset-inline-start:0;translate:0 -50%;transform-origin:inline-start center}
 .chip svg,.fx-badge svg{display:block;width:16px;height:16px}
 .fx-badge svg{width:12px;height:12px}
 .wpop .chips,.chips{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px}
@@ -310,7 +326,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
   <button class="hbtn icon" id="cutmode" aria-label="מצב עריכת חיתוכים" title="מצב עריכת חיתוכים" aria-pressed="false">✂️</button>
   <button class="hbtn icon" id="undo" type="button" aria-label="בטל" title="בטל">↶</button>
   <button class="hbtn submit" id="submit" type="button">הגש</button>
-  <div class="help-pop" id="helpPop" hidden>לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה על מילה עורכת · לחיצה ארוכה על שורה: אפקט לכל השורה · רווח מפצל למילים · <b>🗑</b> הסר · <b>B</b> הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · <b>✂️…</b> חיתוך עם שלוש נקודות</div>
+  <div class="help-pop" id="helpPop" hidden>לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה על מילה עורכת · לחיצה ארוכה על שורה: אפקט לכל השורה · רווח מפצל למילים · <b>🗑</b> הסר · <b>B</b> הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · <b>✂️…</b> חיתוך עם שלוש נקודות · <b>ששש</b> גרירת אות</div>
 </header>
 <div id="lines"></div>
 <div class="vwrap" id="vwrap" data-caption="outline"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><canvas id="subFx" aria-hidden="true"></canvas><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
@@ -347,7 +363,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794565915';
+const BUILD='1794567556';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -418,11 +434,35 @@ const FX_STRIKE_REPL_AT=0.40;
 const FX_STRIKE_REPL_POP_S=0.22;
 const STRIKE_ICON_SVG='<svg class="fx-strike-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><text x="10" y="15" text-anchor="middle" font-size="14" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor">ס</text><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.7" stroke-dasharray="2.2 1.6" stroke-linecap="round"/></svg>';
 function applyFxIcon(el,fx){if(!el||!fx)return;el.textContent='';if(fx.iconHtml)el.innerHTML=fx.iconHtml;else el.textContent=fx.icon||''}
+const FX_DRAG_GAP_MIN=0.08,FX_DRAG_GAP_MAX=0.15,FX_DRAG_COUNT_DEF=2;
+const DRAG_ICON_SVG='<svg class="fx-drag-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><text x="3.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor">ש</text><text x="9.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor" opacity=".72">ש</text><text x="15.2" y="15" font-size="11" font-weight="800" font-family="Assistant,Heebo,sans-serif" fill="currentColor" opacity=".42">ש</text></svg>';
+function letterClusters(text){return clusterize(String(text||''))}
+function normalizeDrag(fx,text){
+  const clusters=letterClusters(text),n=clusters.length;
+  const raw=Array.isArray(fx&&fx.letters)?fx.letters:[];
+  const letters=[...new Set(raw.map(v=>+v).filter(i=>Number.isInteger(i)&&i>=0&&i<n))].sort((a,b)=>a-b);
+  let count=+(fx&&fx.count);
+  if(!Number.isInteger(count))count=FX_DRAG_COUNT_DEF;
+  count=Math.max(1,Math.min(8,count));
+  return {letters,count,clusters};
+}
+function dragLetterStart(s,e,i,len){const L=Math.max(1,len),dur=(e||0)-(s||0);return (s||0)+(i/L)*dur}
+function dragGap(s,e,t0,count){const remaining=Math.max(0,(e||0)-t0);const raw=remaining/Math.max(1,count);return Math.min(FX_DRAG_GAP_MAX,Math.max(FX_DRAG_GAP_MIN,raw))}
+function dragShownExtras(s,e,i,len,count,t){const t0=dragLetterStart(s,e,i,len);if((t||0)+0.02<t0)return 0;const gap=dragGap(s,e,t0,count);return Math.min(count,Math.max(0,Math.floor(((t||0)+0.02-t0)/gap)))}
+function dragBuild(text,letters,count,s,e,t,final){
+  const cl=letterClusters(text),marks=new Set(letters||[]),out=[];
+  for(let i=0;i<cl.length;i++){
+    out.push(cl[i]);
+    if(marks.has(i)){const n=final?count:dragShownExtras(s,e,i,cl.length,count,t);for(let k=0;k<n;k++)out.push(cl[i])}
+  }
+  return out.join('');
+}
 const FX=[
   {type:'none',icon:'○',label:'ללא',need:false,field:''},
   {type:'hidden',icon:'🔍',label:'מילה חבויה',need:'letters',field:'אילו אותיות'},
   {type:'morph',icon:'🔄',label:'מילה מתחלפת',need:'required',field:'משתנה ל…'},
   {type:'strike',icon:'',iconHtml:STRIKE_ICON_SVG,label:'מחיקה',need:'optional',field:'מוחלף ב…'},
+  {type:'drag',icon:'',iconHtml:DRAG_ICON_SVG,label:'גרירת אות',need:'drag',field:'בחרו אות',lineSkip:true},
   {type:'shake',icon:'〰️',label:'רעד',need:false,field:''},
   {type:'typewriter',icon:'⌨️',label:'הקלדה',need:false,field:''},
   {type:'whisper',icon:'🤫',label:'לחישה',need:false,field:''},
@@ -883,14 +923,72 @@ function openWordEdit(unit,anchor){
   const inp2=document.createElement('input');inp2.type='text';inp2.dir='rtl';inp2.value=cur.text2||'';inp2.setAttribute('autocomplete','off');
   inp2.addEventListener('focus',()=>focusCaretEnd(inp2));
   const blocked=document.createElement('div');blocked.className='fx-blocked';blocked.textContent='למילה חתוכה אין אפקטים';
+  const initDrag=normalizeDrag(cur, startVal);
+  let dragLetters=new Set(initDrag.letters), dragCount=initDrag.count, dragBubblesOpen=false;
+  const dragPick=document.createElement('div');dragPick.className='drag-pick';
+  const dragLettersEl=document.createElement('div');dragLettersEl.className='drag-letters';
+  const dragHint=document.createElement('div');dragHint.className='drag-hint';
+  const dragCountWrap=document.createElement('div');dragCountWrap.className='drag-count';
+  const dragCountLab=document.createElement('div');dragCountLab.className='slabel';dragCountLab.textContent='כמה להוסיף';
+  const dragStep=document.createElement('div');dragStep.className='drag-step';
+  const dragMinus=document.createElement('button');dragMinus.type='button';dragMinus.className='drag-minus';dragMinus.textContent='−';dragMinus.title='פחות';dragMinus.setAttribute('aria-label','פחות');
+  const dragNum=document.createElement('button');dragNum.type='button';dragNum.className='drag-num';dragNum.setAttribute('aria-label','מספר אותיות נוספות');
+  const dragPlus=document.createElement('button');dragPlus.type='button';dragPlus.className='drag-plus';dragPlus.textContent='+';dragPlus.title='יותר';dragPlus.setAttribute('aria-label','יותר');
+  dragStep.append(dragMinus,dragNum,dragPlus);
+  dragCountWrap.append(dragCountLab,dragStep);
+  const dragBubbles=document.createElement('div');dragBubbles.className='drag-bubbles';dragBubbles.hidden=true;
+  for(let n=1;n<=8;n++){
+    const b=document.createElement('button');b.type='button';b.dataset.n=String(n);b.textContent=String(n);b.setAttribute('aria-label',n+' אותיות נוספות');
+    b.onclick=e=>{e.stopPropagation();setDragCount(n);dragBubblesOpen=false;syncDragCount()};
+    dragBubbles.appendChild(b);
+  }
+  dragPick.append(dragHint,dragLettersEl,dragCountWrap,dragBubbles);
+  function dragWordText(){return inp.value||startVal||''}
+  function setDragCount(n){dragCount=Math.max(1,Math.min(8,n|0));syncDragCount()}
+  function syncDragCount(){
+    dragNum.textContent=String(dragCount);
+    dragNum.classList.toggle('open',!!dragBubblesOpen);
+    dragNum.setAttribute('aria-expanded',dragBubblesOpen?'true':'false');
+    dragBubbles.hidden=!dragBubblesOpen;
+    dragBubbles.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.n===dragCount));
+  }
+  function rebuildDragLetters(){
+    const cl=letterClusters(dragWordText());
+    dragLetters=new Set([...dragLetters].filter(i=>i>=0&&i<cl.length));
+    dragLettersEl.textContent='';
+    if(!cl.length){dragHint.textContent='אין אותיות לבחירה';return}
+    dragHint.textContent=dragLetters.size?'לחצו על אות כדי לבחור או לבטל':'לחצו על האות שתיגרר';
+    cl.forEach((ch,i)=>{
+      const b=document.createElement('button');b.type='button';b.className='drag-letter'+(dragLetters.has(i)?' on':'');
+      b.textContent=ch;b.dataset.i=String(i);b.title='גרירת האות '+ch;b.setAttribute('aria-label','גרירת האות '+ch);b.setAttribute('aria-pressed',dragLetters.has(i)?'true':'false');
+      b.onclick=e=>{e.stopPropagation();if(dragLetters.has(i))dragLetters.delete(i);else dragLetters.add(i);rebuildDragLetters();repositionPopover()};
+      dragLettersEl.appendChild(b);
+    });
+  }
+  dragMinus.onclick=e=>{e.stopPropagation();setDragCount(dragCount-1)};
+  dragPlus.onclick=e=>{e.stopPropagation();setDragCount(dragCount+1)};
+  dragNum.onclick=e=>{e.stopPropagation();dragBubblesOpen=!dragBubblesOpen;syncDragCount();repositionPopover()};
   function syncField(){
     const meta=fxMeta(chosen);
-    fieldWrap.style.display=(!cutLocked && meta.need)?'block':'none';
-    fieldLab.textContent=meta.field||'';
-    inp2.setAttribute('aria-label',meta.field||'');
-    inp2.placeholder=meta.field||'';
-    inp2.required=meta.need==='required';
+    const show=(!cutLocked && meta.need);
+    fieldWrap.style.display=show?'block':'none';
+    const isDrag=chosen==='drag';
+    fieldLab.style.display=isDrag?'none':'block';
+    inp2.style.display=isDrag?'none':'block';
+    dragPick.style.display=isDrag?'block':'none';
+    if(!isDrag){
+      fieldLab.textContent=meta.field||'';
+      inp2.setAttribute('aria-label',meta.field||'');
+      inp2.placeholder=meta.field||'';
+      inp2.required=meta.need==='required';
+    }else{
+      fieldLab.textContent='';
+      inp2.required=false;
+      rebuildDragLetters();syncDragCount();
+    }
+    if($('wsheet'))repositionPopover();
   }
+  inp.addEventListener('input',()=>{if(chosen==='drag')rebuildDragLetters()});
   if(!cutLocked){
     FX.forEach(fx=>{
       const c=document.createElement('button');c.type='button';c.className='chip'+(fx.type===chosen?' on':'');
@@ -899,10 +997,13 @@ function openWordEdit(unit,anchor){
       chips.appendChild(c);
     });
   }
-  fieldWrap.append(fieldLab,inp2);syncField();
+  fieldWrap.append(fieldLab,inp2,dragPick);syncField();
   function saveWord(thenSlice){
     const val=inp.value, text2=inp2.value;
-    const same=(val===startVal && chosen===(cur.type||'none') && (inp2.value||'')===(cur.text2||''));
+    const dragNow=chosen==='drag'?normalizeDrag({letters:[...dragLetters],count:dragCount},val):null;
+    const prevDrag=cur.type==='drag'?normalizeDrag(cur,startVal):null;
+    const dragSame=!dragNow&&!prevDrag||(dragNow&&prevDrag&&dragNow.count===prevDrag.count&&dragNow.letters.join(',')===prevDrag.letters.join(','));
+    const same=(val===startVal && chosen===(cur.type||'none') && (chosen==='drag'?dragSame:((inp2.value||'')===(cur.text2||''))));
     popoverCommit=null;closeWordEdit();
     if(!same){
       change(()=>{
@@ -910,7 +1011,10 @@ function openWordEdit(unit,anchor){
         const start=unit.sub==null?0:unit.sub;
         const k=String(tokenIdAfter(unit,n,start));
         if(cutLocked||!chosen||chosen==='none')delete effects[k];
-        else{const ev={type:chosen};if((fxMeta(chosen).need)&&text2)ev.text2=text2;else if(text2)ev.text2=text2;effects[k]=ev}
+        else if(chosen==='drag'){
+          if(dragNow&&dragNow.letters.length)effects[k]={type:'drag',letters:dragNow.letters,count:dragNow.count};
+          else delete effects[k];
+        }else{const ev={type:chosen};if((fxMeta(chosen).need)&&text2)ev.text2=text2;else if(text2)ev.text2=text2;effects[k]=ev}
         dirtyFlags.layout=true;dirtyFlags.cuts=true;dirtyFlags.silences=true;dirtyFlags.effects=true;
       },'edits');
     }
@@ -975,7 +1079,7 @@ function openLineEffects(lineEl,anchor){
       c.classList.toggle('on',!!all);
     });
   }
-  FX.filter(fx=>fx.type!=='none').forEach(fx=>{
+  FX.filter(fx=>fx.type!=='none'&&!fx.lineSkip).forEach(fx=>{
     const c=document.createElement('button');c.type='button';c.className='chip';applyFxIcon(c,fx);
     c.title=fx.label;c.setAttribute('aria-label',fx.label);c.dataset.type=fx.type;
     c.onclick=e=>{
@@ -1353,7 +1457,10 @@ window.addEventListener('beforeunload',e=>{if(queued||anyDirty(dirtyFlags)){e.pr
 function cuePart(it){
   const o={text:it.pt.text,start:it.pt.s,end:it.pt.e,bold:isPartBold(it.u,it.pt.off),id:it.u.id,off:it.pt.off};
   const fx=effectOf(it.u);
-  if(fx&&fx.type&&fx.type!=='none'){o.effect=fx.type;if(fx.text2)o.effectText=fx.text2}
+  if(fx&&fx.type&&fx.type!=='none'){
+    o.effect=fx.type;if(fx.text2)o.effectText=fx.text2;
+    if(fx.type==='drag'){const d=normalizeDrag(fx,it.pt.text);o.effectLetters=d.letters;o.effectCount=d.count}
+  }
   return o;
 }
 function cueWordsFromLine(ln){
@@ -1364,7 +1471,7 @@ function cueWordsFromLine(ln){
     if(prev&&prev.id===seg.id){prev.parts.push(seg);prev.text+=seg.text;prev.end=seg.end;prev.bold=prev.parts.every(p=>p.bold)}
     else{
       const w={text:seg.text,start:seg.start,end:seg.end,bold:seg.bold,id:seg.id,off:seg.off,parts:[seg]};
-      if(seg.effect){w.effect=seg.effect;if(seg.effectText)w.effectText=seg.effectText}
+      if(seg.effect){w.effect=seg.effect;if(seg.effectText)w.effectText=seg.effectText;if(seg.effectLetters)w.effectLetters=seg.effectLetters.slice();if(seg.effectCount!=null)w.effectCount=seg.effectCount}
       words.push(w);
     }
   });
@@ -1578,13 +1685,17 @@ function renderSub(u,pt,t){
       }else if(typ==='strike'){
         inner='<span class="fx-strike-word">'+esc(it.pt.text)+'</span>'+(hasRepl?'<span class="fx-repl">'+esc(fx.text2)+'</span>':'');
         if(hasRepl){sizerCls+=' sz-row';sizer='<span class="sz-a">'+esc(it.pt.text)+'</span><span class="sz-gap"></span><span class="sz-b">'+esc(fx.text2)+'</span>'}
+      }else if(typ==='drag'){
+        const d=normalizeDrag(fx,it.pt.text);
+        inner=esc(dragBuild(it.pt.text,d.letters,d.count,it.pt.s,it.pt.e,t,false));
+        sizer=esc(dragBuild(it.pt.text,d.letters,d.count,it.pt.s,it.pt.e,t,true));
       }
       const fxCls=typ?' fx fx-'+typ:'';
       const boldish=isPartBold(it.u,it.pt.off);
       const flipping=typ==='morph'&&hasRepl&&on&&!flipDone;
       const drawing=typ==='strike'&&on&&started&&(t-(it.pt.s||0)<FX_STRIKE_DRAW_S);
       const popping=replIn&&!replDone;
-      const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'')+(typ==='ambush'&&on?' ambush-in':'')+(typ==='strike'&&started?' struck':'')+(drawing?' struck-in':'')+(replDone?' repl-done':replIn?' repl-in':'')+(typ==='morph'&&hasRepl&&flipDone?' morph-done':'')+(flipping?' morph-flip':'');
+      const cls='tok'+(on?' on':'')+(boldish&&started?' b':'')+(boldish?' slot-b':'')+(typ==='ambush'&&on?' ambush-in':'')+(typ==='strike'&&started?' struck':'')+(drawing?' struck-in':'')+(replDone?' repl-done':replIn?' repl-in':'')+(typ==='morph'&&hasRepl&&flipDone?' morph-done':'')+(flipping?' morph-flip':'')+(typ==='drag'?' drag-slot':'');
       const vars=[];
       if(flipping)vars.push('--fx-flip-t:'+(-(t-(it.pt.s||0))).toFixed(3)+'s');
       if(drawing)vars.push('--fx-strike-t:'+(-(t-(it.pt.s||0))).toFixed(3)+'s');
