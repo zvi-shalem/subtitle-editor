@@ -22,16 +22,17 @@
 :root{--bg:#0f1115;--card:#181b22;--fg:#f2f2f2;--mut:#8b93a3;--acc:#ffcc33;--acc2:#4fa3ff;--bar:#12151b;--header-h:52px;--early:#ff9f43;--late:#4fa3ff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'Assistant',sans-serif}
-header{position:sticky;top:0;z-index:20;background:var(--bar);border-bottom:1px solid #262b35;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-header h1{font-size:18px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.status{font-size:13px;color:var(--mut)}
+header{position:sticky;top:0;z-index:20;background:var(--bar);border-bottom:1px solid #262b35;padding:6px 8px;display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
+header h1{font-size:16px;margin:0;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-size:16px;color:var(--mut);flex:0 0 auto;min-width:1.15em;text-align:center;line-height:32px;white-space:nowrap}
 .status.err{color:#ff6b6b}
-.hbtn{font:inherit;font-size:14px;background:#262b35;color:var(--fg);border:0;border-radius:8px;padding:6px 10px}
-.hbtn.icon{width:36px;height:36px;padding:0;font-size:16px;display:inline-flex;align-items:center;justify-content:center}
+.hbtn{font:inherit;font-size:14px;background:#262b35;color:var(--fg);border:0;border-radius:8px;padding:6px 10px;flex:0 0 auto;white-space:nowrap}
+.hbtn.icon{width:32px;height:32px;padding:0;font-size:16px;display:inline-flex;align-items:center;justify-content:center}
 .hbtn.icon[aria-pressed="true"]{background:var(--acc);color:#111}
-.hbtn.submit{background:var(--acc);color:#111;font-weight:800;font-size:16px;padding:8px 18px}
-.help{font-size:13px;color:var(--mut);padding:6px 14px 0;line-height:1.45}
-.help b{color:var(--fg)}
+.hbtn.submit{background:var(--acc);color:#111;font-weight:800;font-size:14px;padding:6px 10px}
+.help-pop{display:none;position:absolute;top:calc(100% + 6px);right:8px;left:8px;z-index:21;background:var(--card);border:1px solid #3a4150;border-radius:10px;padding:10px 12px;font-size:13px;color:var(--mut);line-height:1.45;box-shadow:0 8px 24px #0008}
+.help-pop.open{display:block}
+.help-pop b{color:var(--fg)}
 #lines{padding:8px 8px 90px}
 .line{display:flex;flex-wrap:wrap;align-items:center;gap:0;background:var(--card);border-radius:10px;padding:5px 6px 5px 30px;margin:6px 0 0;position:relative;cursor:pointer}
 .line.cur{outline:2px solid var(--acc2)}
@@ -250,14 +251,14 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 <body>
 <header id="hdr">
   <h1 id="title">עורך כתוביות</h1>
-  <span id="status" class="status">טוען…</span>
+  <span id="status" class="status" title="טוען…" aria-live="polite">…</span>
+  <button class="hbtn icon" id="helpBtn" type="button" aria-label="הוראות" title="הוראות" aria-expanded="false" aria-controls="helpPop">❓</button>
   <button class="hbtn icon" id="captionStyle" type="button" aria-label="סגנון כתוביות" title="סגנון כתוביות">🎨</button>
   <button class="hbtn icon" id="cutmode" aria-label="מצב עריכת חיתוכים" title="מצב עריכת חיתוכים" aria-pressed="false">✂️</button>
-  <button class="hbtn" id="undo" title="ביטול פעולה אחרונה">↶ בטל</button>
-  <button class="hbtn" id="export">ייצוא JSON</button>
-  <button class="hbtn submit" id="submit">הגש</button>
+  <button class="hbtn icon" id="undo" type="button" aria-label="בטל" title="בטל">↶</button>
+  <button class="hbtn submit" id="submit" type="button">הגש</button>
+  <div class="help-pop" id="helpPop" hidden>לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה עורכת טקסט ואפקט · <b>B</b> סימון הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · כל שינוי נשמר</div>
 </header>
-<div class="help">לחיצה על <b>מילה</b> או <b>שורה</b> מעבירה · לחיצה ארוכה עורכת טקסט ואפקט · <b>B</b> סימון הדגשה · <b>↵</b> פיצול · <b>×</b> חיבור · <b>💬</b> הערה · <b>✂️</b> חיתוך · כל שינוי נשמר</div>
 <div id="lines"></div>
 <div class="vwrap" id="vwrap" data-caption="outline"><video id="v" playsinline preload="metadata"></video><div class="sub" id="sub"></div><canvas id="subFx" aria-hidden="true"></canvas><button class="vbig" id="vbig" aria-label="הגדלת הווידאו">⤢</button></div>
 <button type="button" id="vpause" title="השהה" aria-label="השהה">⏸</button>
@@ -291,7 +292,7 @@ body.cutmode .num{opacity:.28;pointer-events:none}
 </div>
 <script>
 // Always run the newest version: if the server has a newer build than this cached copy, reload once.
-const BUILD='1794529365';
+const BUILD='1794533682';
 (function(){fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{const m=t.match(/const BUILD='(\d+)'/);if(m&&m[1]!==BUILD){const k='reloaded-'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');const q=new URLSearchParams(location.search);q.set('v',m[1]);location.replace(location.pathname+'?'+q.toString())}}).catch(()=>{})})();
 
 const SB_URL='https://azfjddzvnxubtmihbynj.supabase.co';
@@ -310,7 +311,16 @@ let nowId=null,nowOff=0,unitEls={},partEls={},unitsCache=[],linesCache=[];
 let songTitle='',performerName='',waNumber='',captionStyle='outline';
 let cutMode=false,playOnTap=true,snackTimer=null,lpTimer=null,lpOpened=false,lpStart=null,suppressSeek=false,silEditKey=null;
 
-function setStatus(t,err){statusEl.textContent=t;statusEl.classList.toggle('err',!!err)}
+function setStatus(t,err){
+  const label=(t==='נשמר ✓')?'נשמר':t;
+  statusEl.classList.toggle('err',!!err);
+  statusEl.title=label;
+  statusEl.setAttribute('aria-label',label);
+  if(err)statusEl.textContent='⚠';
+  else if(t==='נשמר ✓'||t==='נשמר')statusEl.textContent='✓';
+  else if(t==='שומר…'||t==='טוען…')statusEl.textContent='…';
+  else statusEl.textContent='✓';
+}
 function fmt(t){if(!isFinite(t))t=0;const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+String(s).padStart(2,'0')}
 function lastWordIdx(){return Math.max(0,words.length-1)}
 function hasOwn(o,k){return Object.prototype.hasOwnProperty.call(o,k)}
@@ -881,6 +891,14 @@ linesEl.addEventListener('contextmenu',e=>{if(e.target.closest('[data-act="seek"
 document.addEventListener('click',e=>{if(!e.target.closest('.nmenu,.nbtn'))closeNoteMenu()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('wsheet')){e.preventDefault();closeWordEdit()}});
 
+(function(){
+  const btn=$('helpBtn'),pop=$('helpPop');
+  if(!btn||!pop)return;
+  function setOpen(on){pop.hidden=!on;pop.classList.toggle('open',on);btn.setAttribute('aria-expanded',on?'true':'false')}
+  btn.onclick=e=>{e.stopPropagation();setOpen(pop.hidden)};
+  document.addEventListener('click',e=>{if(!pop.hidden&&!e.target.closest('#helpPop,#helpBtn'))setOpen(false)});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!pop.hidden)setOpen(false)});
+})();
 $('captionStyle').onclick=cycleCaptionStyle;
 applyCaptionStyle(readStoredCaptionStyle(),false);
 $('cutmode').onclick=()=>{cutMode=!cutMode;$('cutmode').setAttribute('aria-pressed',cutMode?'true':'false');document.body.classList.toggle('cutmode',cutMode);render(true)};
@@ -969,7 +987,7 @@ function cueWordsFromLine(ln){
   });
   return words;
 }
-$('export').onclick=()=>{
+function exportJson(){
   const st=exportState(),pack=getLines(),cues=[];
   const packed=attachSilenceLines(pack);
   packed.lines.forEach(ln=>{
@@ -978,9 +996,8 @@ $('export').onclick=()=>{
     const parentKey=ln.silence&&String(ln.key).startsWith('s:')?String(ln.key).slice(2):String(ln.key);
     cues.push({start:words[0].start,end:words[words.length-1].end,text:words.map(w=>w.text).join(' '),words,silenceAfter:silences.has(String(ln.key)),silenceText:silenceTextOf(parentKey)||null,note:notes[String(ln.key)]||null,fromSilence:!!ln.silence});
   });
-  const blob=new Blob([JSON.stringify({project:PROJECT,exported_at:new Date().toISOString(),state:st,cues},null,1)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=PROJECT+'-subtitles.json';document.body.appendChild(a);a.click();a.remove();
-};
+  return {project:PROJECT,exported_at:new Date().toISOString(),state:st,cues};
+}
 
 function submitMessage(){return 'היי, סיימתי לערוך את הכתוביות של השיר '+songTitle+' של '+performerName+', תוכל לשלוח לי סרטון בבקשה? (פרויקט: '+PROJECT+')'}
 function submitUrl(){
