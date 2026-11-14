@@ -22,6 +22,13 @@ import {
   normalizeConfig,
   CONFIG_TYPE,
   VIDEO_URL,
+  buildSearchIndex,
+  searchContacts,
+  normalizeSearch,
+  scheduledDue,
+  scheduledUpcoming,
+  buildIcs,
+  pushRecent,
 } from "./core.js";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -200,6 +207,88 @@ check("no network APIs in shipped source", () => {
   assert.match(html, /name="robots" content="noindex/);
   assert.match(html, /connect-src 'none'/);
 });
+
+
+check("Hebrew fuzzy search matches descriptive words and finals", () => {
+  const contacts = [
+    incomingToContact({ name: "יוסי כהן דוד מצד אמא", phones: ["972501234567"] }),
+    incomingToContact({ name: "שירה לוי עבודה", phones: ["972549991111"] }),
+    incomingToContact({ name: "מיכל אברהם", phones: ["972523334444"] }),
+  ];
+  contacts[0].relationNote = "דוד מצד אמא";
+  const idx = buildSearchIndex(contacts);
+  const byName = (q) => searchContacts(idx, q).map((r) => r.name);
+  assert.ok(byName("יוס").some((n) => n.startsWith("יוסי")));
+  assert.ok(byName("כהן").some((n) => n.includes("כהן")));
+  assert.ok(byName("דוד").some((n) => n.includes("יוסי")));
+  assert.ok(byName("אמא").some((n) => n.includes("יוסי")));
+  assert.ok(byName("עבודה").some((n) => n.includes("שירה")));
+  assert.equal(normalizeSearch("שלום"), normalizeSearch("שלומ")); // ם → מ
+  assert.ok(byName("0501234567")[0].includes("יוסי"));
+  assert.ok(!byName("zzzz").length);
+});
+
+check("vCard import skips PHOTO and stays fast at ~3800 contacts", () => {
+  const photo = ("/9j/4AAQ" + "A").repeat(80);
+  const foldedPhoto = photo.match(/.{1,70}/g).map((l, i) => (i ? " " + l : l)).join("\n");
+  const cards = [];
+  for (let i = 0; i < 3800; i++) {
+    const n = String(i).padStart(4, "0");
+    cards.push(`BEGIN:VCARD
+VERSION:3.0
+FN:איש קשר ${n} תיאור משפחה
+TEL;TYPE=CELL:050${String(1000000 + i).slice(-7)}
+PHOTO;ENCODING=b;TYPE=JPEG:
+${foldedPhoto}
+END:VCARD`);
+  }
+  const vcf = cards.join("\n");
+  const t0 = Date.now();
+  const parsed = parseVCard(vcf);
+  const parseMs = Date.now() - t0;
+  assert.equal(parsed.length, 3800, "all cards with phones");
+  assert.equal(parsed[0].name, "איש קשר 0000 תיאור משפחה");
+  assert.equal(parsed[0].phones[0], "972501000000");
+  assert.ok(parseMs < 1500, "parse 3800 with photos in <1.5s, got " + parseMs);
+  const t1 = Date.now();
+  const { added } = mergeIncoming([], parsed);
+  const mergeMs = Date.now() - t1;
+  assert.equal(added.length, 3800);
+  assert.ok(mergeMs < 1500, "merge in <1.5s, got " + mergeMs);
+  const idx = buildSearchIndex(added);
+  const t2 = Date.now();
+  for (let i = 0; i < 50; i++) searchContacts(idx, "תיאור");
+  const searchMs = Date.now() - t2;
+  const hits = searchContacts(idx, "תיאור", 15);
+  assert.ok(hits.length > 0 && hits.length <= 15);
+  assert.ok(searchMs < 200, "50 searches in <200ms, got " + searchMs);
+  console.log("    timing parse", parseMs, "ms merge", mergeMs, "ms 50x search", searchMs, "ms");
+});
+
+check("scheduled due + ics contains wa.me and honest text", () => {
+  const item = {
+    id: "s_test",
+    name: "יוסי כהן",
+    phone: "972501234567",
+    message: "היי, מה קורה?",
+    at: new Date(Date.now() - 1000).toISOString(),
+  };
+  assert.equal(scheduledDue([item]).length, 1);
+  assert.equal(scheduledUpcoming([item]).length, 0);
+  const future = { ...item, at: new Date(Date.now() + 3600000).toISOString() };
+  assert.equal(scheduledDue([future]).length, 0);
+  assert.equal(scheduledUpcoming([future]).length, 1);
+  const ics = buildIcs(item);
+  assert.match(ics, /BEGIN:VCALENDAR/);
+  assert.match(ics, /wa\.me\/972501234567/);
+  assert.match(ics, /השליחה עצמה דורשת לחיצה/);
+  assert.ok(ics.includes("יוסי") || ics.includes("\\u"));
+  const rec = pushRecent([], { name: "יוסי", phone: "050-123-4567" });
+  assert.equal(rec[0].phone, "972501234567");
+  const rec2 = pushRecent(rec, { name: "יוסי", phone: "972501234567" });
+  assert.equal(rec2.length, 1);
+});
+
 
 if (failed) {
   console.error(`\n${failed} failed`);

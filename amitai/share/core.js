@@ -10,6 +10,8 @@ export const STORAGE = {
   contacts: "amitai-share.contacts.v1",
   config: "amitai-share.config.v1",
   ui: "amitai-share.ui.v1",
+  scheduled: "amitai-share.scheduled.v1",
+  recents: "amitai-share.recents.v1",
 };
 
 export const CONFIG_TYPE = "amitai-share-config";
@@ -327,6 +329,7 @@ export function defaultConfig() {
     dimensions: structuredClone(DEFAULT_DIMENSIONS),
     groups: structuredClone(DEFAULT_GROUPS),
     wordings: structuredClone(DEFAULT_WORDINGS),
+    quickTemplates: [],
   };
 }
 
@@ -774,12 +777,28 @@ function decodeVcardValue(value, params) {
 }
 
 export function parseVCard(text) {
-  const unfolded = unfoldVcard(String(text).replace(/^\uFEFF/, ""));
+  // Split only; do not unfold the whole file first — phone exports often
+  // contain huge folded PHOTO lines that would freeze a 3,000+ contact list.
+  const lines = String(text).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
   const cards = [];
   let current = null;
-  for (const line of unfolded.split("\n")) {
-    if (!line.trim()) continue;
-    const up = line.toUpperCase();
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    if (!line) continue;
+    const colon0 = line.indexOf(":");
+    const head0 = colon0 === -1 ? line : line.slice(0, colon0);
+    const bare = (head0.includes(".") ? head0.slice(head0.indexOf(".") + 1) : head0);
+    const propName = (bare.split(";")[0] || "").toUpperCase();
+    if (propName === "PHOTO" || propName === "LOGO" || propName === "SOUND" || propName === "KEY") {
+      while (i + 1 < lines.length && (lines[i + 1].startsWith(" ") || lines[i + 1].startsWith("\t"))) i++;
+      continue;
+    }
+    while (i + 1 < lines.length && (lines[i + 1].startsWith(" ") || lines[i + 1].startsWith("\t"))) {
+      line += lines[++i].slice(1);
+    }
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const up = trimmed.toUpperCase();
     if (up === "BEGIN:VCARD") {
       current = { name: "", phones: [] };
       continue;
@@ -790,18 +809,19 @@ export function parseVCard(text) {
       current = null;
       continue;
     }
+    if (propName !== "FN" && propName !== "N" && propName !== "TEL" && propName !== "NICKNAME") continue;
     const colon = line.indexOf(":");
     if (colon === -1) continue;
     const { name, params } = parseVcardParams(line.slice(0, colon));
     const value = decodeVcardValue(line.slice(colon + 1), params);
     if (name === "FN") current.name = value.trim();
+    else if (name === "NICKNAME" && !current.name) current.name = value.trim();
     else if (name === "N" && !current.name) {
       const bits = value.split(";");
       const given = (bits[1] || "").trim();
       const family = (bits[0] || "").trim();
       current.name = [given, family].filter(Boolean).join(" ").trim();
     } else if (name === "TEL") {
-      // TEL may contain extra type text like "tel:..." or multiple, take digits-ish
       const candidates = value.split(/[;,]/);
       for (const c of candidates) {
         const n = normalizePhone(c);
@@ -986,11 +1006,10 @@ function looksLikeCsv(text) {
   return /name|given|phone|tel|שם|טלפון/i.test(first) && first.includes(",");
 }
 
-export function incomingToContact(raw) {
+export function incomingToContact(raw, now = new Date().toISOString()) {
   const phone = raw.phones[0];
   const name = (raw.name || "").trim() || phone;
   const gender = guessGender(name);
-  const now = new Date().toISOString();
   return {
     id: uid("c"),
     name,
@@ -1014,6 +1033,7 @@ export function incomingToContact(raw) {
 }
 
 export function mergeIncoming(existing, incoming) {
+  const now = new Date().toISOString();
   const byPhone = new Map();
   for (const c of existing) {
     for (const p of c.phones || [c.phone]) byPhone.set(p, c);
@@ -1024,18 +1044,16 @@ export function mergeIncoming(existing, incoming) {
     const phones = raw.phones || [];
     const hit = phones.map((p) => byPhone.get(p)).find(Boolean);
     if (hit) {
-      // merge extra phones, keep tags/sent
       const set = new Set([...(hit.phones || [hit.phone]), ...phones]);
       hit.phones = [...set];
       if (!hit.phone) hit.phone = phones[0];
       if (raw.name && raw.name !== hit.name && !hit.note?.includes(raw.name)) {
-        // don't overwrite a curated name; store alt if empty name was a phone
         if (!hit.name || hit.name === hit.phone) hit.name = raw.name;
       }
-      hit.updatedAt = new Date().toISOString();
+      hit.updatedAt = now;
       skipped.push({ name: raw.name, phone: phones[0], reason: "duplicate" });
     } else {
-      const c = incomingToContact(raw);
+      const c = incomingToContact(raw, now);
       existing.push(c);
       for (const p of c.phones) byPhone.set(p, c);
       added.push(c);
@@ -1115,6 +1133,17 @@ export function normalizeConfig(input) {
     }
     if (groups.length) base.groups = groups;
   }
+  if (Array.isArray(src.quickTemplates)) {
+    const tpls = [];
+    const seen = new Set();
+    for (const raw of src.quickTemplates) {
+      const t = sanitizeQuickTemplate(raw);
+      if (!t || seen.has(t.id)) continue;
+      seen.add(t.id);
+      tpls.push(t);
+    }
+    base.quickTemplates = tpls;
+  }
   return base;
 }
 
@@ -1161,4 +1190,202 @@ export function sanitizeContact(c) {
 
 export function mergeConfigWordings(config, incoming) {
   return normalizeConfig({ ...config, ...incoming, type: CONFIG_TYPE });
+}
+
+
+/* ----------------------------- search (Hebrew, fuzzy, fast) ----------------------------- */
+
+const FINAL_LETTERS = { "ם": "מ", "ן": "נ", "ץ": "צ", "ף": "פ", "ך": "כ" };
+
+export function normalizeSearch(s) {
+  return String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0591-\u05C7]/g, "")
+    .replace(/[םןץףך]/g, (c) => FINAL_LETTERS[c] || c)
+    .replace(/[״"׳'`]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+export function buildSearchIndex(contacts) {
+  return (contacts || []).map((c) => {
+    const phones = (c.phones || [c.phone]).filter(Boolean).map(String);
+    const extra = [c.relationNote, c.note, ...(c.customTags || [])].filter(Boolean).join(" ");
+    const displayPhones = phones.map((p) => formatPhoneDisplay(p));
+    const digitForms = [];
+    for (const p of phones) {
+      const d = String(p).replace(/\D/g, "");
+      digitForms.push(d);
+      if (d.startsWith("972")) {
+        digitForms.push("0" + d.slice(3), d.slice(3));
+      }
+    }
+    const hay = normalizeSearch([c.name, extra, ...displayPhones, ...digitForms].join(" "));
+    return {
+      id: c.id,
+      name: c.name || "",
+      phone: c.phone,
+      phones,
+      displayPhone: formatPhoneDisplay(c.phone),
+      hay,
+      tokens: hay.split(" ").filter(Boolean),
+      nameNorm: normalizeSearch(c.name || ""),
+      digits: digitForms.join(" "),
+    };
+  });
+}
+
+function compactSubsequence(hay, q) {
+  // true if q's chars appear in order with a reasonably tight span
+  let j = 0;
+  let first = -1;
+  let last = -1;
+  for (let i = 0; i < hay.length && j < q.length; i++) {
+    if (hay[i] === q[j]) {
+      if (first < 0) first = i;
+      last = i;
+      j++;
+    }
+  }
+  if (j < q.length) return false;
+  return (last - first + 1) <= q.length + 2;
+}
+
+export function searchContacts(index, query, limit = 15) {
+  const raw = String(query ?? "").trim();
+  if (!raw || !index?.length) return [];
+  const qNorm = normalizeSearch(raw);
+  const qDigits = raw.replace(/\D/g, "");
+  const qTokens = qNorm.split(" ").filter(Boolean);
+  const out = [];
+  for (const e of index) {
+    let score = 0;
+    if (qDigits.length >= 3 && e.digits.includes(qDigits)) {
+      score = Math.max(score, e.digits.endsWith(qDigits) ? 90 : 75);
+    }
+    if (qNorm) {
+      if (e.nameNorm === qNorm) score = Math.max(score, 220);
+      else if (e.nameNorm.startsWith(qNorm)) score = Math.max(score, 200);
+      else if (e.tokens.some((t) => t.startsWith(qNorm))) score = Math.max(score, 170);
+      else if (e.hay.startsWith(qNorm) || e.hay.includes(" " + qNorm)) score = Math.max(score, 140);
+      else if (e.hay.includes(qNorm)) score = Math.max(score, 120);
+      else if (qTokens.length > 1 && qTokens.every((qt) => e.tokens.some((t) => t.startsWith(qt) || t.includes(qt)))) {
+        score = Math.max(score, 150);
+      } else if (qNorm.length >= 3 && compactSubsequence(e.nameNorm, qNorm)) {
+        score = Math.max(score, 60);
+      }
+    }
+    if (score > 0) out.push({ entry: e, score });
+  }
+  out.sort((a, b) => b.score - a.score || a.entry.name.localeCompare(b.entry.name, "he"));
+  return out.slice(0, limit).map((r) => ({ ...r.entry, score: r.score }));
+}
+
+/* ----------------------------- scheduled messages / calendar ----------------------------- */
+
+export function sanitizeScheduled(item) {
+  if (!item || typeof item !== "object") return null;
+  const phone = normalizePhone(item.phone) || (typeof item.phone === "string" && item.phone.startsWith("972") ? item.phone : null);
+  if (!phone) return null;
+  const at = Date.parse(item.at);
+  if (!Number.isFinite(at)) return null;
+  return {
+    id: typeof item.id === "string" && item.id ? item.id : uid("s"),
+    contactId: item.contactId || null,
+    name: String(item.name || formatPhoneDisplay(phone)),
+    phone,
+    message: String(item.message || ""),
+    at: new Date(at).toISOString(),
+    createdAt: item.createdAt || new Date().toISOString(),
+    notified: !!item.notified,
+    sentAt: item.sentAt || null,
+  };
+}
+
+export function scheduledDue(items, now = new Date()) {
+  const t = now.getTime();
+  return (items || []).filter((s) => !s.sentAt && Date.parse(s.at) <= t);
+}
+
+export function scheduledUpcoming(items, now = new Date()) {
+  const t = now.getTime();
+  return (items || [])
+    .filter((s) => !s.sentAt && Date.parse(s.at) > t)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+
+function icsEscape(s) {
+  return String(s ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
+function icsStamp(date) {
+  return new Date(date).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+export function buildIcs(item) {
+  const start = new Date(item.at);
+  const end = new Date(start.getTime() + 15 * 60 * 1000);
+  const url = waMeUrl(item.phone, item.message || "");
+  const summary = `לשלוח הודעה ל${item.name || formatPhoneDisplay(item.phone)}`;
+  const desc = [
+    "השליחה עצמה דורשת לחיצה שלך — פתח את הקישור כדי לפתוח וואטסאפ עם ההודעה.",
+    "",
+    item.message || "",
+    "",
+    url,
+  ].join("\n");
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Amitai Share//HE",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${(item.id || uid("s")).replace(/[^A-Za-z0-9_.-]/g, "")}@amitai-share`,
+    `DTSTAMP:${icsStamp(new Date())}`,
+    `DTSTART:${icsStamp(start)}`,
+    `DTEND:${icsStamp(end)}`,
+    `SUMMARY:${icsEscape(summary)}`,
+    `DESCRIPTION:${icsEscape(desc)}`,
+    `URL:${url}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+    "",
+  ].join("\r\n");
+  return ics;
+}
+
+export function sanitizeRecent(item) {
+  if (!item || typeof item !== "object") return null;
+  const phone = normalizePhone(item.phone) || (typeof item.phone === "string" && item.phone.startsWith("972") ? item.phone : null);
+  if (!phone) return null;
+  return {
+    id: item.id || null,
+    name: String(item.name || formatPhoneDisplay(phone)),
+    phone,
+    at: item.at || new Date().toISOString(),
+  };
+}
+
+export function pushRecent(list, entry, limit = 12) {
+  const item = sanitizeRecent(entry);
+  if (!item) return list || [];
+  const rest = (list || []).filter((r) => r.phone !== item.phone);
+  return [item, ...rest].slice(0, limit);
+}
+
+export function sanitizeQuickTemplate(t) {
+  if (!t || typeof t !== "object" || typeof t.text !== "string" || !t.text.trim()) return null;
+  return {
+    id: typeof t.id === "string" && t.id ? t.id : uid("t"),
+    name: String(t.name || "תבנית").trim() || "תבנית",
+    text: t.text,
+  };
 }

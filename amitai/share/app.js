@@ -8,7 +8,9 @@ const ICON = {
   people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2 .3 3.6 1.7 4.2 4.3"/></svg>',
   groups: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>',
   tools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>',
+  quick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3v-3H5A1.5 1.5 0 0 1 3.5 16V8A1.5 1.5 0 0 1 5 6.5z"/></svg>',
 };
+
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => (
@@ -36,13 +38,18 @@ function setDim(contact, dimId, value) {
 const state = {
   contacts: [],
   config: C.defaultConfig(),
-  ui: { tab: "queue", onboarding: true, search: "", sentFilter: "unsent", dimFilters: {} },
+  ui: { tab: "quick", onboarding: true, search: "", sentFilter: "unsent", dimFilters: {}, uiVersion: 2 },
   shabbat: C.shabbatInfo(),
   sheet: null,
   toast: null,
   skip: new Set(),
   lastSentId: null,
   importReport: null,
+  scheduled: [],
+  recents: [],
+  searchIndex: [],
+  quick: { query: "", selected: null, message: "", highlight: 0, scheduleAt: "" },
+  _dueShown: 0,
 };
 
 function load() {
@@ -65,9 +72,49 @@ function load() {
     const rawU = localStorage.getItem(C.STORAGE.ui);
     if (rawU) {
       const u = JSON.parse(rawU);
+      const ver = u.uiVersion || 0;
       state.ui = { ...state.ui, ...u, search: "" };
+      if (ver < 2) {
+        state.ui.tab = "quick";
+        state.ui.uiVersion = 2;
+        try { saveUi(); } catch (_) { /* ignore */ }
+      }
     }
   } catch (_) { /* ignore */ }
+  if ((state.ui.uiVersion || 0) < 2) {
+    state.ui.tab = "quick";
+    state.ui.uiVersion = 2;
+    try { saveUi(); } catch (_) { /* ignore */ }
+  }
+  try {
+    const rawS = localStorage.getItem(C.STORAGE.scheduled);
+    if (rawS) {
+      const parsed = JSON.parse(rawS);
+      const list = Array.isArray(parsed) ? parsed : (parsed.items || []);
+      state.scheduled = list.map(C.sanitizeScheduled).filter(Boolean);
+    }
+  } catch (err) { console.warn("scheduled load failed", err); }
+  try {
+    const rawR = localStorage.getItem(C.STORAGE.recents);
+    if (rawR) {
+      const parsed = JSON.parse(rawR);
+      const list = Array.isArray(parsed) ? parsed : [];
+      state.recents = list.map(C.sanitizeRecent).filter(Boolean);
+    }
+  } catch (err) { console.warn("recents load failed", err); }
+  rebuildIndex();
+}
+
+function rebuildIndex() {
+  state.searchIndex = C.buildSearchIndex(state.contacts);
+}
+
+function saveScheduled() {
+  localStorage.setItem(C.STORAGE.scheduled, JSON.stringify(state.scheduled));
+}
+
+function saveRecents() {
+  localStorage.setItem(C.STORAGE.recents, JSON.stringify(state.recents));
 }
 
 function saveContacts() {
@@ -179,14 +226,17 @@ function render() {
     </header>
     ${renderBanners(n)}
     <main class="main" id="main">
+      ${renderDueCards()}
+      ${tab === "quick" ? renderQuick() : ""}
       ${tab === "queue" ? renderQueue(n) : ""}
       ${tab === "contacts" ? renderContacts() : ""}
       ${tab === "groups" ? renderGroups() : ""}
       ${tab === "tools" ? renderTools(n) : ""}
     </main>
     <nav class="nav" aria-label="ניווט ראשי">
+      ${navBtn("quick", ICON.quick, "הודעה", C.scheduledDue(state.scheduled).length)}
       ${navBtn("queue", ICON.queue, "תור")}
-      ${navBtn("contacts", ICON.people, "אנשי קשר")}
+      ${navBtn("contacts", ICON.people, "קשרים")}
       ${navBtn("groups", ICON.groups, "קבוצות")}
       ${navBtn("tools", ICON.tools, "ייבוא")}
     </nav>
@@ -206,9 +256,247 @@ function render() {
   }
 }
 
-function navBtn(id, icon, label) {
-  return `<button type="button" class="${state.ui.tab === id ? "is-on" : ""}" data-act="tab" data-tab="${id}" aria-current="${state.ui.tab === id ? "page" : "false"}">${icon}<span>${label}</span></button>`;
+
+function navBtn(id, icon, label, badge = 0) {
+  const on = state.ui.tab === id ? "is-on" : "";
+  const badgeCls = badge ? " nav-badge" : "";
+  const badgeAttr = badge ? ` data-badge="${badge > 9 ? "9+" : badge}"` : "";
+  return `<button type="button" class="${on}${badgeCls}" data-act="tab" data-tab="${id}" aria-current="${state.ui.tab === id ? "page" : "false"}"${badgeAttr}>${icon}<span>${label}</span></button>`;
 }
+
+function formatWhenLong(iso) {
+  if (!iso) return "";
+  return new Intl.DateTimeFormat("he-IL", {
+    timeZone: "Asia/Jerusalem",
+    weekday: "short",
+    day: "numeric",
+    month: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+function toLocalInput(date) {
+  const x = date instanceof Date ? date : new Date(date);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`;
+}
+
+function quickSuggestions() {
+  const q = state.quick.query || "";
+  const hits = C.searchContacts(state.searchIndex, q, 15);
+  const rawPhone = C.normalizePhone(q);
+  const items = [];
+  if (rawPhone && !hits.some((h) => h.phone === rawPhone || (h.phones || []).includes(rawPhone))) {
+    items.push({ type: "phone", name: "מספר חדש", phone: rawPhone, displayPhone: C.formatPhoneDisplay(rawPhone) });
+  }
+  for (const h of hits) items.push({ type: "contact", ...h });
+  return items;
+}
+
+function renderSuggestList() {
+  const items = quickSuggestions();
+  if (!(state.quick.query || "").trim()) return "";
+  if (!items.length) {
+    return `<div class="suggest"><p class="tiny" style="padding:.8rem">אין התאמה ברשימה. אפשר להקליד מספר טלפון מלא ולשלוח אליו.</p></div>`;
+  }
+  const hi = Math.max(0, Math.min(state.quick.highlight || 0, items.length - 1));
+  state.quick.highlight = hi;
+  return `<div class="suggest" id="quick-suggest" role="listbox">${items.map((it, i) => `
+    <button type="button" class="person ${i === hi ? "is-hi" : ""}" role="option" data-act="pick-quick" data-phone="${esc(it.phone)}" data-id="${esc(it.id || "")}" data-name="${esc(it.name || "")}">
+      <span class="avatar">${esc((it.name || "?").slice(0, 1))}</span>
+      <span class="person-body"><strong>${esc(it.name)}</strong><small>${esc(it.displayPhone || C.formatPhoneDisplay(it.phone))}${it.type === "phone" ? " · לא ברשימה" : ""}</small></span>
+    </button>`).join("")}</div>`;
+}
+
+function paintQuickSuggestions() {
+  const host = document.getElementById("quick-suggest-slot");
+  if (host) host.innerHTML = renderSuggestList();
+}
+
+function renderDueCards() {
+  const due = C.scheduledDue(state.scheduled);
+  if (!due.length) return "";
+  return due.map((item) => `
+    <article class="card due-card">
+      <h2>הגיע הזמן לשלוח</h2>
+      <p class="kicker">אל ${esc(item.name)} · נועד ל־${esc(formatWhenLong(item.at))}</p>
+      <pre class="preview">${esc(item.message || "(בלי טקסט)")}</pre>
+      <button type="button" class="btn btn-wa" data-act="send-scheduled" data-id="${esc(item.id)}">${ICON.wa}<span>שליחה בוואטסאפ</span></button>
+      <p class="tiny">השליחה עצמה דורשת לחיצה שלך. האתר לא שולח לבד.</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" data-act="snooze-scheduled" data-id="${esc(item.id)}">עוד שעה</button>
+        <button type="button" class="btn btn-ghost" data-act="dismiss-scheduled" data-id="${esc(item.id)}">הסר</button>
+      </div>
+    </article>`).join("");
+}
+
+function renderQuick() {
+  const q = state.quick;
+  const selected = q.selected;
+  const templates = state.config.quickTemplates || [];
+  const upcoming = C.scheduledUpcoming(state.scheduled);
+  const recents = state.recents || [];
+  const perm = typeof Notification !== "undefined" ? Notification.permission : "denied";
+  return `
+    <div class="card">
+      <div class="hero-name">הודעה מהירה</div>
+      <p class="kicker">חפשו חלק משם — גם מילה תיאורית כמו «דוד» או «עבודה» — או הקלידו מספר. הכל נשאר במכשיר.</p>
+      ${selected ? `
+        <div class="picked">
+          <div>
+            <strong>${esc(selected.name)}</strong>
+            <small>${esc(C.formatPhoneDisplay(selected.phone))}</small>
+          </div>
+          <button type="button" class="icon-btn" data-act="clear-quick" aria-label="בחירה אחרת">✕</button>
+        </div>
+      ` : `
+        <div class="field">
+          <label for="quick-search">אל מי</label>
+          <input class="search" id="quick-search" data-field="quick-search" value="${esc(q.query || "")}" placeholder="שם, מילה מתוך השם, או מספר" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-autocomplete="list">
+        </div>
+        ${!q.query && recents.length ? `<div class="recent-wrap"><span class="chip-legend">נשלחו לאחרונה</span><div class="chips">${recents.map((r) =>
+          `<button type="button" class="chip" data-act="pick-quick" data-id="${esc(r.id || "")}" data-phone="${esc(r.phone)}" data-name="${esc(r.name)}">${esc(r.name)}</button>`
+        ).join("")}</div></div>` : ""}
+        <div id="quick-suggest-slot">${renderSuggestList()}</div>
+      `}
+      ${!state.contacts.length ? `<p class="tiny">עוד אין רשימה מיובאת — אפשר בכל זאת לשלוח למספר, או <button type="button" class="linkish" data-act="tab" data-tab="tools">לייבא אנשי קשר</button>.</p>` : ""}
+      <div class="field">
+        <label for="quick-message">ההודעה</label>
+        <textarea class="textarea" id="quick-message" data-field="quick-message" placeholder="כתבו כאן כל הודעה">${esc(q.message || "")}</textarea>
+      </div>
+      ${templates.length ? `<span class="chip-legend">תבניות שמורות</span><div class="chips">${templates.map((tp) =>
+        `<button type="button" class="chip" data-act="use-template" data-id="${esc(tp.id)}">${esc(tp.name)}</button>`
+      ).join("")}</div>` : ""}
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" data-act="save-template" ${!(q.message || "").trim() ? "disabled" : ""}>שמור כתבנית</button>
+      </div>
+      <button type="button" class="btn btn-wa" data-act="send-quick" ${selected?.phone && (q.message || "").length >= 0 ? "" : "disabled"}>${ICON.wa}<span>שליחה בוואטסאפ</span></button>
+      <p class="tiny">הכפתור פותח צ׳אט עם ההודעה כבר כתובה. השליחה עצמה תמיד דורשת לחיצה שלך בוואטסאפ.</p>
+      <hr class="sep">
+      <span class="section-title">תזמון</span>
+      <p class="tiny">שומרים תזכורת כאן. אם האתר פתוח בזמן, תופיע כרטיסיית «הגיע הזמן לשלוח». אפשר גם להוסיף ליומן — שימושי כשהאתר סגור. האתר לא שולח הודעות לבד.</p>
+      <div class="sched-row">
+        <input class="input" type="datetime-local" data-field="schedule-at" value="${esc(q.scheduleAt || "")}" aria-label="תאריך ושעה">
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" data-act="save-scheduled">שמור לתזמון</button>
+        <button type="button" class="btn btn-ghost" data-act="download-ics">הוסף ליומן</button>
+      </div>
+      ${perm === "default" ? `<button type="button" class="btn btn-ghost" data-act="ask-notify">אפשר התראות כשהאתר פתוח</button>` : ""}
+      ${perm === "granted" ? `<p class="tiny ok-text">התראות מותרות — יעבדו רק כשהאתר פתוח בדפדפן (באייפון, לרוב רק אחרי «הוספה למסך הבית»).</p>` : ""}
+      ${perm === "denied" ? `<p class="tiny">התראות חסומות בדפדפן. היומן הוא הדרך הבטוחה להיזכר.</p>` : ""}
+    </div>
+    ${upcoming.length ? `<span class="section-title">מתוזמנות</span>${upcoming.map((item) => `
+      <article class="card">
+        <h3>${esc(item.name)}</h3>
+        <p class="count">${esc(formatWhenLong(item.at))} · ${esc(C.formatPhoneDisplay(item.phone))}</p>
+        <pre class="preview">${esc(item.message || "")}</pre>
+        <div class="btn-row">
+          <button type="button" class="btn btn-ghost" data-act="download-ics" data-id="${esc(item.id)}">הוסף ליומן</button>
+          <button type="button" class="btn btn-ghost btn-danger" data-act="dismiss-scheduled" data-id="${esc(item.id)}">מחיקה</button>
+        </div>
+      </article>`).join("")}` : ""}
+  `;
+}
+
+function currentQuickTarget() {
+  return state.quick.selected;
+}
+
+function applyFreeTemplate(text) {
+  const sel = state.quick.selected;
+  const contact = sel?.id ? (findContact(sel.id) || sel) : { name: sel?.name || "", gender: "unknown" };
+  let out = String(text ?? "").replace(/\{שם\}/g, C.firstNameOf(contact?.name) || contact?.name || "");
+  out = out.replace(/\{קישור\}/g, state.config.videoUrl || C.VIDEO_URL);
+  const gender = contact?.gender || "unknown";
+  out = out.replace(/\{([^}/|\n]+?)\/([^}]+?)\}/g, (_, male, female) => {
+    if (gender === "female") return female;
+    if (gender === "male") return male;
+    return `${male}/${female}`;
+  });
+  return out;
+}
+
+function sendToWhatsApp(name, phone, message, contactId) {
+  if (!phone) return;
+  const url = C.waMeUrl(phone, message || "");
+  state.recents = C.pushRecent(state.recents, { id: contactId || null, name, phone });
+  saveRecents();
+  window.open(url, "_blank", "noopener");
+}
+
+function downloadIcs(item) {
+  const blob = new Blob([C.buildIcs(item)], { type: "text/calendar;charset=utf-8" });
+  const a = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  const safe = String(item.name || "contact").replace(/[^\u0590-\u05FFa-zA-Z0-9]+/g, "-").slice(0, 30);
+  a.href = url;
+  a.download = `send-${safe || "message"}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function draftScheduledItem(at) {
+  const sel = state.quick.selected;
+  if (!sel?.phone || !at) return null;
+  return C.sanitizeScheduled({
+    id: C.uid("s"),
+    contactId: sel.id || null,
+    name: sel.name,
+    phone: sel.phone,
+    message: state.quick.message || "",
+    at,
+  });
+}
+
+function fireNotification(item) {
+  if (typeof Notification === "undefined") return;
+  if (Notification.permission !== "granted") return;
+  try {
+    const n = new Notification("הגיע הזמן לשלוח", {
+      body: `${item.name}\n${(item.message || "").slice(0, 90)}`,
+      tag: "amitai-share-" + item.id,
+      dir: "rtl",
+      lang: "he",
+    });
+    n.onclick = () => {
+      window.focus();
+      state.ui.tab = "quick";
+      render();
+    };
+  } catch (_) { /* ignore */ }
+}
+
+let dueTimer = null;
+function checkDue({ notify = true } = {}) {
+  const due = C.scheduledDue(state.scheduled);
+  let changed = false;
+  if (notify) {
+    for (const item of due) {
+      if (!item.notified) {
+        item.notified = true;
+        changed = true;
+        fireNotification(item);
+      }
+    }
+    if (changed) saveScheduled();
+  }
+  if (due.length !== state._dueShown || changed) {
+    state._dueShown = due.length;
+    if (document.getElementById("app")) render();
+  }
+}
+
+function startDueWatch() {
+  checkDue({ notify: true });
+  if (dueTimer) clearInterval(dueTimer);
+  dueTimer = setInterval(() => checkDue({ notify: true }), 20000);
+}
+
+
 
 function renderBanners(n) {
   const sh = state.shabbat;
@@ -349,7 +637,7 @@ function renderContacts() {
       ${filters.map(([id, lab]) => `<button type="button" class="chip ${state.ui.sentFilter === id ? "is-on" : ""}" data-act="sent-filter" data-val="${id}">${lab}</button>`).join("")}
     </div>
     <p class="stat-line">${list.length} אנשי קשר${state.contacts.length !== list.length ? ` מתוך ${state.contacts.length}` : ""}. <button type="button" class="linkish" data-act="quick-tag">תיוג מהיר</button></p>
-    <div class="card">${list.length ? list.map(personRow).join("") : `<p class="empty">אין מישהו שמתאים לסינון.</p>`}</div>
+    <div class="card">${list.length ? list.slice(0, 80).map(personRow).join("") + (list.length > 80 ? `<p class="tiny">מציג 80 מתוך ${list.length}. חיפוש מצמצם מהר, או שלחו מהלשונית «הודעה».</p>` : "") : `<p class="empty">אין מישהו שמתאים לסינון.</p>`}</div>
   `;
 }
 
@@ -484,12 +772,12 @@ function renderTools(n) {
 function renderOnboarding() {
   return `<div class="onboard" role="dialog" aria-labelledby="ob-title">
     <div class="onboard-card">
-      <h2 id="ob-title">שולחים את «הנה הם», אחד־אחד</h2>
+      <h2 id="ob-title">הודעה מהירה, וגם «הנה הם»</h2>
       <p>הכלי הזה רץ רק אצלך בטלפון. אנשי הקשר לא יוצאים מכאן לשום מקום.</p>
       <ol>
-        <li>מייבאים את הרשימה שסיננת.</li>
-        <li>מתייגים לפי קרבה, שמירת שבת ומין — ויש גם תיוג מהיר.</li>
-        <li>עוברים בתור, מציצים בהודעה, ולוחצים לשליחה בוואטסאפ.</li>
+        <li>מייבאים את הרשימה מהטלפון (גם אלפי אנשי קשר).</li>
+        <li>בלשונית «הודעה» מחפשים שם, כותבים, ופותחים וואטסאפ בלחיצה.</li>
+        <li>אפשר גם לתזמן תזכורת — השליחה עצמה תמיד דורשת לחיצה שלך.</li>
       </ol>
       <button type="button" class="btn btn-primary" data-act="dismiss-onboard">הבנתי, בואו נתחיל</button>
     </div>
@@ -515,6 +803,7 @@ function renderSheet() {
   else if (s.type === "paste") body = renderPasteSheet();
   else if (s.type === "confirm") body = renderConfirmSheet();
   else if (s.type === "import-report") body = renderImportReport();
+  else if (s.type === "save-tpl") body = renderSaveTplSheet();
   else return "";
   return `<div class="overlay" data-act="overlay-close" role="presentation"><div class="sheet" role="dialog" aria-modal="true">${body}</div></div>`;
 }
@@ -745,6 +1034,20 @@ function renderConfirmSheet() {
   `;
 }
 
+function renderSaveTplSheet() {
+  return `
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><h2>שמירת תבנית</h2>
+      <button type="button" class="icon-btn" data-act="close-sheet" aria-label="סגירה">✕</button></div>
+    <p class="kicker">נשמר רק במכשיר, בלי אנשי הקשר.</p>
+    <div class="field">
+      <label for="tpln">שם התבנית</label>
+      <input class="input" id="tpln" data-field="tpl-name" value="${esc(state.sheet.name || "")}">
+    </div>
+    <button type="button" class="btn btn-primary" data-act="confirm-save-template">שמירה</button>
+  `;
+}
+
 function renderImportReport() {
   const r = state.importReport || { added: [], skipped: [], invalid: 0, kind: "" };
   return `
@@ -798,7 +1101,8 @@ function importRawContacts(raw, kind) {
   saveContacts();
   state.importReport = { added, skipped, invalid: 0, kind };
   state.sheet = { type: "import-report" };
-  if (added.length && state.ui.tab === "tools") state.ui.tab = "queue";
+  if (added.length) state.ui.tab = "quick";
+  rebuildIndex();
   render();
 }
 
@@ -839,6 +1143,21 @@ function importJson(data) {
       state.config = C.normalizeConfig(data.config);
       saveConfig();
     }
+    if (Array.isArray(data.scheduled)) {
+      const have = new Set(state.scheduled.map((s) => s.id));
+      for (const raw of data.scheduled) {
+        const s = C.sanitizeScheduled(raw);
+        if (s && !have.has(s.id)) { state.scheduled.push(s); have.add(s.id); }
+      }
+      saveScheduled();
+    }
+    if (Array.isArray(data.recents)) {
+      for (const raw of data.recents.slice().reverse()) {
+        state.recents = C.pushRecent(state.recents, raw);
+      }
+      saveRecents();
+    }
+    rebuildIndex();
     state.sheet = { type: "import-report" };
     render();
     return;
@@ -858,6 +1177,7 @@ function importJson(data) {
     const skippedN = list.length - fresh.length;
     state.contacts.push(...fresh);
     saveContacts();
+    rebuildIndex();
     state.importReport = { added: fresh, skipped: Array(skippedN).fill(0), invalid: 0, kind: "json" };
     state.sheet = { type: "import-report" };
     render();
@@ -876,6 +1196,19 @@ function slugify(name) {
   return C.uid(base);
 }
 
+
+function pickQuick(item) {
+  if (!item?.phone) return;
+  const contact = item.id ? findContact(item.id) : null;
+  state.quick.selected = {
+    id: item.id || contact?.id || null,
+    name: item.name || contact?.name || C.formatPhoneDisplay(item.phone),
+    phone: item.phone,
+  };
+  state.quick.query = "";
+  state.quick.highlight = 0;
+  render();
+}
 
 function handleAct(act, el, ev) {
   const id = el.dataset?.id || "";
@@ -1018,6 +1351,8 @@ function handleAct(act, el, ev) {
       exportedAt: new Date().toISOString(),
       contacts: state.contacts,
       config: state.config,
+      scheduled: state.scheduled,
+      recents: state.recents,
     });
     return;
   }
@@ -1120,6 +1455,113 @@ function handleAct(act, el, ev) {
     render();
     return;
   }
+  
+  if (act === "pick-quick") {
+    pickQuick({ id: el.dataset.id || "", name: el.dataset.name || "", phone: el.dataset.phone });
+    return;
+  }
+  if (act === "clear-quick") {
+    state.quick.selected = null;
+    render();
+    document.getElementById("quick-search")?.focus();
+    return;
+  }
+  if (act === "send-quick") {
+    const sel = state.quick.selected;
+    if (!sel?.phone) { showToast("בחרו איש קשר או הקלידו מספר"); return; }
+    sendToWhatsApp(sel.name, sel.phone, state.quick.message || "", sel.id);
+    showToast(`נפתח וואטסאפ עם ${sel.name}`);
+    return;
+  }
+  if (act === "use-template") {
+    const tp = (state.config.quickTemplates || []).find((x) => x.id === id);
+    if (!tp) return;
+    state.quick.message = applyFreeTemplate(tp.text);
+    render();
+    return;
+  }
+  if (act === "save-template") {
+    const text = (state.quick.message || "").trim();
+    if (!text) return;
+    state.sheet = { type: "save-tpl", name: text.split("\n")[0].slice(0, 24) };
+    render();
+    return;
+  }
+  if (act === "confirm-save-template") {
+    const text = (state.quick.message || "").trim();
+    const name = (state.sheet?.name || "תבנית").trim() || "תבנית";
+    if (!text) { closeSheet(); return; }
+    const t = C.sanitizeQuickTemplate({ name, text });
+    state.config.quickTemplates = state.config.quickTemplates || [];
+    state.config.quickTemplates.push(t);
+    saveConfig();
+    closeSheet();
+    showToast("התבנית נשמרה במכשיר");
+    return;
+  }
+  if (act === "save-scheduled") {
+    const sel = state.quick.selected;
+    if (!sel?.phone) { showToast("בחרו קודם אל מי לשלוח"); return; }
+    if (!state.quick.scheduleAt) { showToast("בחרו תאריך ושעה"); return; }
+    const at = new Date(state.quick.scheduleAt);
+    if (!Number.isFinite(at.getTime())) { showToast("הזמן לא תקין"); return; }
+    if (at.getTime() < Date.now() - 60000) { showToast("בחרו זמן בעתיד"); return; }
+    const item = draftScheduledItem(at.toISOString());
+    if (!item) return;
+    state.scheduled.push(item);
+    saveScheduled();
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().then(() => render());
+    }
+    showToast("נשמר לתזמון — השליחה תדרוש לחיצה שלך");
+    render();
+    return;
+  }
+  if (act === "download-ics") {
+    let item = id ? state.scheduled.find((s) => s.id === id) : null;
+    if (!item) {
+      const sel = state.quick.selected;
+      if (!sel?.phone) { showToast("בחרו קודם אל מי לשלוח"); return; }
+      const at = state.quick.scheduleAt ? new Date(state.quick.scheduleAt) : new Date(Date.now() + 3600000);
+      if (!Number.isFinite(at.getTime())) { showToast("הזמן לא תקין"); return; }
+      item = draftScheduledItem(at.toISOString());
+    }
+    if (item) downloadIcs(item);
+    return;
+  }
+  if (act === "send-scheduled") {
+    const item = state.scheduled.find((s) => s.id === id);
+    if (!item) return;
+    sendToWhatsApp(item.name, item.phone, item.message || "", item.contactId);
+    item.sentAt = new Date().toISOString();
+    saveScheduled();
+    showToast(`נפתח וואטסאפ עם ${item.name}`);
+    render();
+    return;
+  }
+  if (act === "snooze-scheduled") {
+    const item = state.scheduled.find((s) => s.id === id);
+    if (!item) return;
+    item.at = new Date(Date.now() + 3600000).toISOString();
+    item.notified = false;
+    saveScheduled();
+    showToast("נדחה בשעה");
+    render();
+    return;
+  }
+  if (act === "dismiss-scheduled") {
+    state.scheduled = state.scheduled.filter((s) => s.id !== id);
+    saveScheduled();
+    render();
+    return;
+  }
+  if (act === "ask-notify") {
+    if (typeof Notification !== "undefined") {
+      Notification.requestPermission().then(() => render());
+    }
+    return;
+  }
+
   handleActMore(act, el, id, val);
 }
 
@@ -1256,6 +1698,7 @@ function handleActMore(act, el, id, val) {
   if (act === "delete-contact") {
     state.contacts = state.contacts.filter((c) => c.id !== id);
     saveContacts();
+    rebuildIndex();
     closeSheet();
     showToast("איש הקשר נמחק");
     return;
@@ -1280,6 +1723,7 @@ function handleActMore(act, el, id, val) {
   if (act === "do-clear-all") {
     state.contacts = [];
     saveContacts();
+    rebuildIndex();
     closeSheet();
     showToast("הרשימה נמחקה מהמכשיר");
     return;
@@ -1296,6 +1740,24 @@ function handleActMore(act, el, id, val) {
 function handleField(field, el) {
   const id = el.dataset.id || "";
   const value = el.value;
+  if (field === "quick-search") {
+    state.quick.query = value;
+    state.quick.highlight = 0;
+    paintQuickSuggestions();
+    return;
+  }
+  if (field === "quick-message") {
+    state.quick.message = value;
+    return;
+  }
+  if (field === "schedule-at") {
+    state.quick.scheduleAt = value;
+    return;
+  }
+  if (field === "tpl-name") {
+    if (state.sheet) state.sheet.name = value;
+    return;
+  }
   if (field === "search") {
     state.ui.search = value;
     const mainPos = document.getElementById("main")?.scrollTop;
@@ -1388,9 +1850,30 @@ function bind() {
     const el = ev.target.closest("[data-field]");
     if (!el) return;
     if (el.dataset.field === "groupOverride") handleField("groupOverride", el);
+    if (el.dataset.field === "schedule-at") handleField("schedule-at", el);
   });
   root.addEventListener("keydown", (ev) => {
     const el = ev.target.closest("[data-field]");
+    if (el && el.dataset.field === "quick-search") {
+      const items = quickSuggestions();
+      if (ev.key === "ArrowDown" && items.length) {
+        ev.preventDefault();
+        state.quick.highlight = Math.min((state.quick.highlight || 0) + 1, items.length - 1);
+        paintQuickSuggestions();
+      } else if (ev.key === "ArrowUp" && items.length) {
+        ev.preventDefault();
+        state.quick.highlight = Math.max((state.quick.highlight || 0) - 1, 0);
+        paintQuickSuggestions();
+      } else if (ev.key === "Enter") {
+        ev.preventDefault();
+        const pick = items[state.quick.highlight] || items[0];
+        if (pick) pickQuick(pick);
+      } else if (ev.key === "Escape") {
+        state.quick.query = "";
+        el.value = "";
+        paintQuickSuggestions();
+      }
+    }
     if (el && el.dataset.field === "newTag" && ev.key === "Enter") {
       ev.preventDefault();
       handleFieldCommit("newTag", el);
@@ -1418,8 +1901,12 @@ function bind() {
 
 load();
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => { bind(); render(); });
+  document.addEventListener("DOMContentLoaded", () => { bind(); render(); startDueWatch(); });
 } else {
   bind();
   render();
+  startDueWatch();
 }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") checkDue({ notify: true });
+});
