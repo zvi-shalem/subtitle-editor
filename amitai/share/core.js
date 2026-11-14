@@ -1498,12 +1498,25 @@ export function partitionRecs(people, shabbat) {
   return { ready, held, sent };
 }
 
+export function recLevelLabel(person) {
+  return LEVEL_LABELS[person?.level] || String(person?.level || "").trim() || "";
+}
+
 export function recReasonTags(person) {
   const tags = [];
-  if (person?.circle) tags.push(person.circle);
-  const level = LEVEL_LABELS[person?.level] || person?.level;
-  if (level) tags.push(level);
+  const circle = String(person?.circle || "").trim();
+  const level = recLevelLabel(person);
+  if (circle) tags.push(circle);
+  if (level && level !== circle) tags.push(level);
   return tags;
+}
+
+export function recPrimaryTag(person) {
+  return recReasonTags(person)[0] || "";
+}
+
+export function recPreview(message) {
+  return String(message || "").replace(/\s+/g, " ").trim();
 }
 
 export function resolveRecPhone(person, index) {

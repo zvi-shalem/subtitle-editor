@@ -39,6 +39,9 @@ import {
   encodeRecsFragment,
   decodeRecsFragment,
   recsHashPayload,
+  recReasonTags,
+  recPrimaryTag,
+  recPreview,
   RECS_TYPE,
 } from "./core.js";
 
@@ -300,6 +303,13 @@ check("scheduled due + ics contains wa.me and honest text", () => {
   assert.equal(rec2.length, 1);
 });
 
+
+check("recs: tags do not repeat circle and level", () => {
+  assert.deepEqual(recReasonTags({ circle: "משפחה", level: "א" }), ["משפחה"]);
+  assert.equal(recPrimaryTag({ circle: "משפחה", level: "א" }), "משפחה");
+  assert.deepEqual(recReasonTags({ circle: "צבא", level: "ג" }), ["צבא", "חברים טובים"]);
+  assert.equal(recPreview("אבא\nיצא לי  משהו\n"), "אבא יצא לי משהו");
+});
 
 check("recs: sent boolean is honored", () => {
   const a = sanitizeRec({ id: "1", name: "יוסי", sent: true });

@@ -10,6 +10,7 @@ const ICON = {
   tools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>',
   quick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3v-3H5A1.5 1.5 0 0 1 3.5 16V8A1.5 1.5 0 0 1 5 6.5z"/></svg>',
   recs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6l2.2 5.1 5.5.5-4.2 3.6 1.3 5.3L12 15.6 7.2 18.1l1.3-5.3-4.2-3.6 5.5-.5z"/></svg>',
+  importFile: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M8 10l4 4 4-4"/><path d="M5 18h14"/></svg>',
 };
 
 
@@ -51,6 +52,7 @@ const state = {
   recents: [],
   recs: [],
   recSearch: {},
+  recExpanded: null,
   searchIndex: [],
   quick: { query: "", selected: null, message: "", highlight: 0, scheduleAt: "" },
   _dueShown: 0,
@@ -294,15 +296,18 @@ function render() {
     : `נשלחו <em>${n.sent}</em> מתוך ${n.all || "—"}`;
 
   root.innerHTML = `
-    <header class="header">
+    <header class="header ${tab === "recs" ? "header--tight" : ""}">
       <div class="brand">
-        <strong>שיתוף «הנה הם»</strong>
-        <span>אמתי שלם · נשמר רק אצלך</span>
+        <strong>${tab === "recs" ? "מומלצים" : "שיתוף «הנה הם»"}</strong>
+        ${tab === "recs" ? "" : "<span>אמתי שלם · נשמר רק אצלך</span>"}
       </div>
-      <div class="progress-pill" title="התקדמות השליחה">${pill}</div>
+      <div class="header-actions">
+        <div class="progress-pill" title="התקדמות השליחה">${pill}</div>
+        ${tab === "recs" ? `<button type="button" class="icon-btn icon-btn--sm" data-act="pick-recs" aria-label="ייבוא רשימת מומלצים" title="ייבוא רשימת מומלצים">${ICON.importFile}</button>` : ""}
+      </div>
     </header>
     ${renderBanners(n)}
-    <main class="main" id="main">
+    <main class="main ${tab === "recs" ? "main--tight" : ""}" id="main">
       ${renderDueCards()}
       ${tab === "recs" ? renderRecs(recParts) : ""}
       ${tab === "quick" ? renderQuick() : ""}
@@ -388,77 +393,66 @@ function paintRecSuggest(id) {
 }
 
 function renderRecCard(p, { sent = false, held = false } = {}) {
-  const tags = C.recReasonTags(p);
-  const note = p.notes ? `<p class="rec-note">${esc(p.notes)}</p>` : "";
-  const phoneLine = p.phone
-    ? `<div class="hero-phone">${esc(C.formatPhoneDisplay(p.phone))}</div>`
-    : "";
-  const tagBits = tags.map((t) => `<span class="chip is-on chip--mute">${esc(t)}</span>`).join("");
-  let phoneBox = "";
-  if (!p.phone && !sent) {
-    const q = state.recSearch[p.id] || "";
-    phoneBox = `
-      <div class="field">
-        <label for="rec-phone-${esc(p.id)}">אין מספר עדיין — חפשו ברשימה או הקלידו</label>
-        <input class="search" id="rec-phone-${esc(p.id)}" data-field="rec-phone-search" data-id="${esc(p.id)}" value="${esc(q)}" placeholder="שם או מספר" autocomplete="off" autocorrect="off" spellcheck="false">
-      </div>
-      <div id="rec-suggest-${esc(p.id)}">${renderRecSuggest({ ...p, })}</div>
-      ${C.normalizePhone(q) ? `<button type="button" class="btn btn-ghost" data-act="pick-rec-phone" data-id="${esc(p.id)}" data-phone="${esc(C.normalizePhone(q))}">לשמור את המספר הזה</button>` : ""}`;
-  }
-  const holdBit = held ? `<span class="chip is-on chip--warn">מחכה למוצ״ש</span>` : "";
-  const sentBit = sent && p.sentAt ? `<span class="chip is-on chip--ok">נשלח ${esc(formatWhen(p.sentAt))}</span>` : "";
-  const waDisabled = !p.phone || !(p.message || "").trim() || held;
+  const open = state.recExpanded === p.id;
+  const tag = C.recPrimaryTag(p);
+  const preview = C.recPreview(p.message);
   const waBtn = held
-    ? `<button type="button" class="btn btn-ghost" data-act="send-rec" data-id="${esc(p.id)}" data-force="1">לפתוח וואטסאפ בכל זאת</button>`
-    : `<button type="button" class="btn btn-wa" data-act="send-rec" data-id="${esc(p.id)}" ${waDisabled ? "disabled" : ""}>${ICON.wa}<span>שליחה בוואטסאפ</span></button>`;
-  return `<article class="card rec-card ${sent ? "is-sent" : ""} ${held ? "is-hold" : ""}" data-rec="${esc(p.id)}">
-    <div class="rec-head">
-      <div class="rec-head-text">
-        <div class="hero-name">${esc(p.name)}</div>
-        ${phoneLine}
+    ? `<button type="button" class="rec-wa rec-wa--hold" data-act="send-rec" data-id="${esc(p.id)}" data-force="1" aria-label="לפתוח וואטסאפ בכל זאת">${ICON.wa}</button>`
+    : `<button type="button" class="rec-wa" data-act="send-rec" data-id="${esc(p.id)}" ${!p.phone || !(p.message || "").trim() ? "disabled" : ""} aria-label="שליחה בוואטסאפ">${ICON.wa}</button>`;
+  let extra = "";
+  if (open) {
+    let phoneBox = "";
+    if (!p.phone) {
+      const q = state.recSearch[p.id] || "";
+      phoneBox = `
+        <div class="field">
+          <label for="rec-phone-${esc(p.id)}">אין מספר — חפשו ברשימה או הקלידו</label>
+          <input class="search" id="rec-phone-${esc(p.id)}" data-field="rec-phone-search" data-id="${esc(p.id)}" value="${esc(q)}" placeholder="שם או מספר" autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <div id="rec-suggest-${esc(p.id)}">${renderRecSuggest(p)}</div>
+        ${C.normalizePhone(q) ? `<button type="button" class="btn btn-ghost" data-act="pick-rec-phone" data-id="${esc(p.id)}" data-phone="${esc(C.normalizePhone(q))}">לשמור את המספר הזה</button>` : ""}`;
+    }
+    extra = `<div class="rec-expand">
+      ${phoneBox}
+      <div class="field">
+        <label for="rec-msg-${esc(p.id)}">ההודעה</label>
+        <textarea class="textarea textarea--compact" id="rec-msg-${esc(p.id)}" data-field="rec-message" data-id="${esc(p.id)}">${esc(p.message || "")}</textarea>
       </div>
+      ${held ? `<p class="warn-text tiny">שומר שבת — עדיף לחכות למוצ״ש.</p>` : ""}
+    </div>`;
+  }
+  const chipClass = held ? "rec-chip rec-chip--hold" : (sent ? "rec-chip rec-chip--ok" : "rec-chip");
+  const chipText = held ? "מוצ״ש" : (sent ? "נשלח" : tag);
+  return `<article class="rec-row ${sent ? "is-sent" : ""} ${held ? "is-hold" : ""} ${open ? "is-open" : ""}" data-rec="${esc(p.id)}">
+    <div class="rec-line">
+      <button type="button" class="rec-main" data-act="toggle-rec-expand" data-id="${esc(p.id)}" aria-expanded="${open ? "true" : "false"}">
+        <span class="rec-main-top">
+          <span class="rec-name">${esc(p.name)}</span>
+          ${chipText ? `<span class="${chipClass}">${esc(chipText)}</span>` : ""}
+        </span>
+        <span class="rec-preview">${esc(preview || "אין הודעה עדיין")}</span>
+      </button>
       ${sentToggle(p.id, sent, "toggle-rec-sent", p.name)}
+      ${waBtn}
     </div>
-    <div class="meta-row">${tagBits}${holdBit}${sentBit}</div>
-    ${note}
-    ${phoneBox}
-    <div class="field">
-      <label for="rec-msg-${esc(p.id)}">ההודעה שתישלח</label>
-      <textarea class="textarea" id="rec-msg-${esc(p.id)}" data-field="rec-message" data-id="${esc(p.id)}">${esc(p.message || "")}</textarea>
-    </div>
-    ${held ? `<p class="warn-text tiny">שומר שבת, ועכשיו שבת — עדיף לחכות למוצ״ש.</p>` : ""}
-    ${sent
-      ? `<div class="btn-row"><button type="button" class="btn btn-ghost" data-act="toggle-rec-sent" data-id="${esc(p.id)}">בטל «נשלח»</button></div>`
-      : waBtn + `<p class="tiny">הכפתור פותח צ׳אט עם ההודעה כבר כתובה. השליחה עצמה תמיד דורשת לחיצה שלך בוואטסאפ. אפשר גם לסמן ✓ אם כבר שלחת לבד.</p>`}
+    ${extra}
   </article>`;
 }
 
 function renderRecs(parts) {
   const { ready, held, sent } = parts || recsPartition();
-  const importBtn = `<button type="button" class="btn btn-ghost" data-act="pick-recs">ייבוא רשימת מומלצים</button>`;
   if (!state.recs.length) {
     return `
-      <span class="section-title">מומלצים</span>
       <div class="card empty">
         <h2>עוד אין רשימה לשלוח</h2>
         <p>יבאו כאן את קובץ המומלצים, או פתחו את הקישור שקיבלתם. הכל נשמר רק במכשיר הזה.</p>
-        ${importBtn}
+        <button type="button" class="btn btn-ghost" data-act="pick-recs">ייבוא רשימת מומלצים</button>
       </div>`;
   }
-  const sh = state.shabbat;
-  const holdBanner = held.length
-    ? `<div class="banner banner--shabbat" role="status"><strong>${held.length} שומרי שבת ממתינים למוצ״ש</strong>${sh.end ? ` (בערך ${esc(C.formatIsraelTime(sh.end))})` : ""}. הם יופיעו כאן אחרי צאת השבת.</div>`
-    : "";
   return `
-    <div class="recs-toolbar">
-      <span class="section-title">מומלצים לשליחה</span>
-      ${importBtn}
-    </div>
-    <p class="stat-line">${ready.length ? `עכשיו בתור: ${ready.length}.` : "אין כרגע מישהו לשלוח."}${held.length ? ` ${held.length} מחכים למוצ״ש.` : ""}${sent.length ? ` נשלחו ${sent.length}.` : ""}</p>
-    ${ready.length ? ready.map((p) => renderRecCard(p)).join("") : (held.length || sent.length ? "" : `<div class="card empty"><h2>הכל יצא לדרך</h2><p>אפשר לבטל סימון עם ✓ אם לחצת בטעות.</p></div>`)}
-    ${holdBanner}
-    ${held.length ? `<span class="section-title">מחכים למוצ״ש</span>${held.map((p) => renderRecCard(p, { held: true })).join("")}` : ""}
-    ${sent.length ? `<span class="section-title">נשלח</span>${sent.map((p) => renderRecCard(p, { sent: true })).join("")}` : ""}
+    ${ready.length ? `<div class="rec-list">${ready.map((p) => renderRecCard(p)).join("")}</div>` : (held.length || sent.length ? "" : `<div class="card empty"><h2>הכל יצא לדרך</h2><p>אפשר לבטל סימון עם ✓ אם לחצת בטעות.</p></div>`)}
+    ${held.length ? `<span class="section-title">מחכים למוצ״ש</span><div class="rec-list">${held.map((p) => renderRecCard(p, { held: true })).join("")}</div>` : ""}
+    ${sent.length ? `<span class="section-title">נשלח</span><div class="rec-list">${sent.map((p) => renderRecCard(p, { sent: true })).join("")}</div>` : ""}
   `;
 }
 
@@ -697,12 +691,21 @@ function startDueWatch() {
 
 
 function renderBanners(n) {
+  if (state.ui.hideShabbatBanner) return "";
   const sh = state.shabbat;
+  const recHeld = state.ui.tab === "recs"
+    ? recsPartition().held.length
+    : 0;
   if (sh.isShabbat) {
-    return `<div class="banner banner--shabbat" role="status"><strong>עכשיו שבת בישראל.</strong> שומרי שבת מוסתרים מהתור ויחכו למוצ״ש (בערך ${esc(C.formatIsraelTime(sh.end))}). נשארו ${n.observant} כאלה שעדיין לא נשלח להם.</div>`;
+    const who = state.ui.tab === "recs"
+      ? (recHeld ? `${recHeld} ממתינים למוצ״ש` : "שומרי שבת ממתינים למוצ״ש")
+      : `${n.observant ? n.observant + " " : ""}שומרי שבת ממתינים למוצ״ש`;
+    const when = sh.end ? ` · ${esc(C.formatIsraelTime(sh.end))}` : "";
+    return `<div class="banner banner--slim banner--shabbat" role="status"><span>שבת עכשיו${when} · ${esc(who)}</span><button type="button" class="icon-btn icon-btn--sm" data-act="dismiss-banner" aria-label="סגירה">✕</button></div>`;
   }
   if (sh.fridayAfternoon) {
-    return `<div class="banner" role="status"><strong>שישי אחר הצהריים.</strong> השבת נכנסת בסביבות ${esc(C.formatIsraelTime(sh.start))} (שעה לפני השקיעה בירושלים). כדאי לסיים לשלוח לשומרי שבת לפני כן, או להשאיר למוצ״ש.</div>`;
+    const when = sh.start ? esc(C.formatIsraelTime(sh.start)) : "";
+    return `<div class="banner banner--slim" role="status"><span>שישי אחה״צ · שבת בסביבות ${when}</span><button type="button" class="icon-btn icon-btn--sm" data-act="dismiss-banner" aria-label="סגירה">✕</button></div>`;
   }
   return "";
 }
@@ -1590,6 +1593,17 @@ function handleAct(act, el, ev) {
   }
   if (act === "pick-recs") {
     document.getElementById("json-import")?.click();
+    return;
+  }
+  if (act === "toggle-rec-expand") {
+    state.recExpanded = state.recExpanded === id ? null : id;
+    render();
+    return;
+  }
+  if (act === "dismiss-banner") {
+    state.ui.hideShabbatBanner = true;
+    saveUi();
+    render();
     return;
   }
   if (act === "skip") {
