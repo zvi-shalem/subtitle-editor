@@ -9,6 +9,7 @@ const ICON = {
   groups: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>',
   tools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>',
   quick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3v-3H5A1.5 1.5 0 0 1 3.5 16V8A1.5 1.5 0 0 1 5 6.5z"/></svg>',
+  recs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6l2.2 5.1 5.5.5-4.2 3.6 1.3 5.3L12 15.6 7.2 18.1l1.3-5.3-4.2-3.6 5.5-.5z"/></svg>',
 };
 
 
@@ -38,15 +39,18 @@ function setDim(contact, dimId, value) {
 const state = {
   contacts: [],
   config: C.defaultConfig(),
-  ui: { tab: "quick", onboarding: true, search: "", sentFilter: "unsent", dimFilters: {}, uiVersion: 2 },
+  ui: { tab: "recs", onboarding: true, search: "", sentFilter: "unsent", dimFilters: {}, uiVersion: 3 },
   shabbat: C.shabbatInfo(),
   sheet: null,
   toast: null,
   skip: new Set(),
   lastSentId: null,
+  lastSentRecId: null,
   importReport: null,
   scheduled: [],
   recents: [],
+  recs: [],
+  recSearch: {},
   searchIndex: [],
   quick: { query: "", selected: null, message: "", highlight: 0, scheduleAt: "" },
   _dueShown: 0,
@@ -74,16 +78,16 @@ function load() {
       const u = JSON.parse(rawU);
       const ver = u.uiVersion || 0;
       state.ui = { ...state.ui, ...u, search: "" };
-      if (ver < 2) {
-        state.ui.tab = "quick";
-        state.ui.uiVersion = 2;
+      if (ver < 3) {
+        state.ui.tab = "recs";
+        state.ui.uiVersion = 3;
         try { saveUi(); } catch (_) { /* ignore */ }
       }
     }
   } catch (_) { /* ignore */ }
-  if ((state.ui.uiVersion || 0) < 2) {
-    state.ui.tab = "quick";
-    state.ui.uiVersion = 2;
+  if ((state.ui.uiVersion || 0) < 3) {
+    state.ui.tab = "recs";
+    state.ui.uiVersion = 3;
     try { saveUi(); } catch (_) { /* ignore */ }
   }
   try {
@@ -102,7 +106,15 @@ function load() {
       state.recents = list.map(C.sanitizeRecent).filter(Boolean);
     }
   } catch (err) { console.warn("recents load failed", err); }
+  try {
+    const rawRecs = localStorage.getItem(C.STORAGE.recs);
+    if (rawRecs) {
+      const parsed = JSON.parse(rawRecs);
+      state.recs = C.normalizeRecs(parsed).people;
+    }
+  } catch (err) { console.warn("recs load failed", err); }
   rebuildIndex();
+  autoFillRecPhones();
 }
 
 function rebuildIndex() {
@@ -115,6 +127,67 @@ function saveScheduled() {
 
 function saveRecents() {
   localStorage.setItem(C.STORAGE.recents, JSON.stringify(state.recents));
+}
+
+function saveRecs() {
+  localStorage.setItem(C.STORAGE.recs, JSON.stringify({
+    type: C.RECS_TYPE,
+    version: 1,
+    savedAt: new Date().toISOString(),
+    people: state.recs,
+  }));
+}
+
+function findRec(id) {
+  return state.recs.find((p) => p.id === id);
+}
+
+function autoFillRecPhones() {
+  let changed = false;
+  for (const p of state.recs) {
+    if (p.phone) continue;
+    const phone = C.resolveRecPhone(p, state.searchIndex);
+    if (phone) {
+      p.phone = phone;
+      changed = true;
+    }
+  }
+  if (changed) {
+    try { saveRecs(); } catch (_) { /* ignore */ }
+  }
+  return changed;
+}
+
+function enrichRec(p) {
+  const copy = { ...p };
+  if ((!copy.shabbat || copy.shabbat === "unknown") && copy.phone) {
+    const c = state.contacts.find((x) => (x.phones || [x.phone]).includes(copy.phone));
+    if (c?.shabbat && c.shabbat !== "unknown") copy.shabbat = c.shabbat;
+  }
+  return copy;
+}
+
+async function consumeRecsHash() {
+  const hash = typeof location !== "undefined" ? (location.hash || "") : "";
+  if (!hash.includes("recs=")) return false;
+  try {
+    const data = await C.decodeRecsFragment(hash);
+    if (data?.people?.length) {
+      state.recs = C.mergeRecs(state.recs, data.people);
+      autoFillRecPhones();
+      saveRecs();
+      state.ui.tab = "recs";
+      saveUi();
+      showToast(`נטענו ${data.people.length} מומלצים. הכל נשמר רק במכשיר הזה.`);
+    }
+  } catch (err) {
+    console.warn("recs hash failed", err);
+    showToast("לא הצלחתי לקרוא את רשימת המומלצים מהקישור");
+  }
+  try {
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+  } catch (_) { /* ignore */ }
+  return true;
 }
 
 function saveContacts() {
@@ -214,7 +287,11 @@ function render() {
 
   state.shabbat = C.shabbatInfo();
   const n = counts();
+  const recParts = recsPartition();
   const tab = state.ui.tab;
+  const pill = (tab === "recs" && state.recs.length)
+    ? `נשלחו <em>${recParts.sent.length}</em> מתוך ${state.recs.length}`
+    : `נשלחו <em>${n.sent}</em> מתוך ${n.all || "—"}`;
 
   root.innerHTML = `
     <header class="header">
@@ -222,18 +299,20 @@ function render() {
         <strong>שיתוף «הנה הם»</strong>
         <span>אמתי שלם · נשמר רק אצלך</span>
       </div>
-      <div class="progress-pill" title="התקדמות השליחה">נשלחו <em>${n.sent}</em> מתוך ${n.all || "—"}</div>
+      <div class="progress-pill" title="התקדמות השליחה">${pill}</div>
     </header>
     ${renderBanners(n)}
     <main class="main" id="main">
       ${renderDueCards()}
+      ${tab === "recs" ? renderRecs(recParts) : ""}
       ${tab === "quick" ? renderQuick() : ""}
       ${tab === "queue" ? renderQueue(n) : ""}
       ${tab === "contacts" ? renderContacts() : ""}
       ${tab === "groups" ? renderGroups() : ""}
       ${tab === "tools" ? renderTools(n) : ""}
     </main>
-    <nav class="nav" aria-label="ניווט ראשי">
+    <nav class="nav nav--6" aria-label="ניווט ראשי">
+      ${navBtn("recs", ICON.recs, "מומלצים", recParts.ready.length)}
       ${navBtn("quick", ICON.quick, "הודעה", C.scheduledDue(state.scheduled).length)}
       ${navBtn("queue", ICON.queue, "תור")}
       ${navBtn("contacts", ICON.people, "קשרים")}
@@ -262,6 +341,125 @@ function navBtn(id, icon, label, badge = 0) {
   const badgeCls = badge ? " nav-badge" : "";
   const badgeAttr = badge ? ` data-badge="${badge > 9 ? "9+" : badge}"` : "";
   return `<button type="button" class="${on}${badgeCls}" data-act="tab" data-tab="${id}" aria-current="${state.ui.tab === id ? "page" : "false"}"${badgeAttr}>${icon}<span>${label}</span></button>`;
+}
+
+function recsPartition() {
+  const people = state.recs.map((p) => enrichRec(p));
+  return C.partitionRecs(people, state.shabbat);
+}
+
+function sentToggle(id, isSent, act, labelName) {
+  const on = isSent ? "is-on" : "";
+  const name = labelName || "";
+  const aria = isSent ? `לבטל סימון שנשלח אל ${name}` : `לסמן כנשלח אל ${name}, בלי לפתוח וואטסאפ`;
+  return `<button type="button" class="sent-toggle ${on}" data-act="${esc(act)}" data-id="${esc(id)}" aria-pressed="${isSent ? "true" : "false"}" aria-label="${esc(aria)}" title="${esc(aria)}">✓</button>`;
+}
+
+function recPhoneSuggestions(rec) {
+  const q = (state.recSearch[rec.id] || "").trim();
+  if (!q) return [];
+  const phone = C.normalizePhone(q);
+  const hits = C.searchContacts(state.searchIndex, q, 6);
+  if (phone && !hits.some((h) => h.phone === phone)) {
+    return [{ id: "", name: "המספר שהוקלד", phone, displayPhone: C.formatPhoneDisplay(phone), score: 100 }, ...hits];
+  }
+  return hits;
+}
+
+function renderRecSuggest(rec) {
+  const items = recPhoneSuggestions(rec);
+  if (!items.length) {
+    const q = (state.recSearch[rec.id] || "").trim();
+    if (!q) return "";
+    return `<div class="suggest"><p class="tiny" style="padding:.7rem .8rem">אין התאמה ברשימה. אפשר להקליד מספר ולשמור.</p></div>`;
+  }
+  return `<div class="suggest" role="listbox">${items.map((it) => `
+    <button type="button" class="person" role="option" data-act="pick-rec-phone" data-id="${esc(rec.id)}" data-phone="${esc(it.phone)}" data-name="${esc(it.name || "")}">
+      <span class="person-body"><strong>${esc(it.name || C.formatPhoneDisplay(it.phone))}</strong><small>${esc(it.displayPhone || C.formatPhoneDisplay(it.phone))}</small></span>
+    </button>`).join("")}</div>`;
+}
+
+function paintRecSuggest(id) {
+  const slot = document.getElementById(`rec-suggest-${id}`);
+  if (!slot) return;
+  const p = findRec(id);
+  if (!p) return;
+  slot.innerHTML = renderRecSuggest(p);
+}
+
+function renderRecCard(p, { sent = false, held = false } = {}) {
+  const tags = C.recReasonTags(p);
+  const note = p.notes ? `<p class="rec-note">${esc(p.notes)}</p>` : "";
+  const phoneLine = p.phone
+    ? `<div class="hero-phone">${esc(C.formatPhoneDisplay(p.phone))}</div>`
+    : "";
+  const tagBits = tags.map((t) => `<span class="chip is-on chip--mute">${esc(t)}</span>`).join("");
+  let phoneBox = "";
+  if (!p.phone && !sent) {
+    const q = state.recSearch[p.id] || "";
+    phoneBox = `
+      <div class="field">
+        <label for="rec-phone-${esc(p.id)}">אין מספר עדיין — חפשו ברשימה או הקלידו</label>
+        <input class="search" id="rec-phone-${esc(p.id)}" data-field="rec-phone-search" data-id="${esc(p.id)}" value="${esc(q)}" placeholder="שם או מספר" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div id="rec-suggest-${esc(p.id)}">${renderRecSuggest({ ...p, })}</div>
+      ${C.normalizePhone(q) ? `<button type="button" class="btn btn-ghost" data-act="pick-rec-phone" data-id="${esc(p.id)}" data-phone="${esc(C.normalizePhone(q))}">לשמור את המספר הזה</button>` : ""}`;
+  }
+  const holdBit = held ? `<span class="chip is-on chip--warn">מחכה למוצ״ש</span>` : "";
+  const sentBit = sent && p.sentAt ? `<span class="chip is-on chip--ok">נשלח ${esc(formatWhen(p.sentAt))}</span>` : "";
+  const waDisabled = !p.phone || !(p.message || "").trim() || held;
+  const waBtn = held
+    ? `<button type="button" class="btn btn-ghost" data-act="send-rec" data-id="${esc(p.id)}" data-force="1">לפתוח וואטסאפ בכל זאת</button>`
+    : `<button type="button" class="btn btn-wa" data-act="send-rec" data-id="${esc(p.id)}" ${waDisabled ? "disabled" : ""}>${ICON.wa}<span>שליחה בוואטסאפ</span></button>`;
+  return `<article class="card rec-card ${sent ? "is-sent" : ""} ${held ? "is-hold" : ""}" data-rec="${esc(p.id)}">
+    <div class="rec-head">
+      <div class="rec-head-text">
+        <div class="hero-name">${esc(p.name)}</div>
+        ${phoneLine}
+      </div>
+      ${sentToggle(p.id, sent, "toggle-rec-sent", p.name)}
+    </div>
+    <div class="meta-row">${tagBits}${holdBit}${sentBit}</div>
+    ${note}
+    ${phoneBox}
+    <div class="field">
+      <label for="rec-msg-${esc(p.id)}">ההודעה שתישלח</label>
+      <textarea class="textarea" id="rec-msg-${esc(p.id)}" data-field="rec-message" data-id="${esc(p.id)}">${esc(p.message || "")}</textarea>
+    </div>
+    ${held ? `<p class="warn-text tiny">שומר שבת, ועכשיו שבת — עדיף לחכות למוצ״ש.</p>` : ""}
+    ${sent
+      ? `<div class="btn-row"><button type="button" class="btn btn-ghost" data-act="toggle-rec-sent" data-id="${esc(p.id)}">בטל «נשלח»</button></div>`
+      : waBtn + `<p class="tiny">הכפתור פותח צ׳אט עם ההודעה כבר כתובה. השליחה עצמה תמיד דורשת לחיצה שלך בוואטסאפ. אפשר גם לסמן ✓ אם כבר שלחת לבד.</p>`}
+  </article>`;
+}
+
+function renderRecs(parts) {
+  const { ready, held, sent } = parts || recsPartition();
+  const importBtn = `<button type="button" class="btn btn-ghost" data-act="pick-recs">ייבוא רשימת מומלצים</button>`;
+  if (!state.recs.length) {
+    return `
+      <span class="section-title">מומלצים</span>
+      <div class="card empty">
+        <h2>עוד אין רשימה לשלוח</h2>
+        <p>יבאו כאן את קובץ המומלצים, או פתחו את הקישור שקיבלתם. הכל נשמר רק במכשיר הזה.</p>
+        ${importBtn}
+      </div>`;
+  }
+  const sh = state.shabbat;
+  const holdBanner = held.length
+    ? `<div class="banner banner--shabbat" role="status"><strong>${held.length} שומרי שבת ממתינים למוצ״ש</strong>${sh.end ? ` (בערך ${esc(C.formatIsraelTime(sh.end))})` : ""}. הם יופיעו כאן אחרי צאת השבת.</div>`
+    : "";
+  return `
+    <div class="recs-toolbar">
+      <span class="section-title">מומלצים לשליחה</span>
+      ${importBtn}
+    </div>
+    <p class="stat-line">${ready.length ? `עכשיו בתור: ${ready.length}.` : "אין כרגע מישהו לשלוח."}${held.length ? ` ${held.length} מחכים למוצ״ש.` : ""}${sent.length ? ` נשלחו ${sent.length}.` : ""}</p>
+    ${ready.length ? ready.map((p) => renderRecCard(p)).join("") : (held.length || sent.length ? "" : `<div class="card empty"><h2>הכל יצא לדרך</h2><p>אפשר לבטל סימון עם ✓ אם לחצת בטעות.</p></div>`)}
+    ${holdBanner}
+    ${held.length ? `<span class="section-title">מחכים למוצ״ש</span>${held.map((p) => renderRecCard(p, { held: true })).join("")}` : ""}
+    ${sent.length ? `<span class="section-title">נשלח</span>${sent.map((p) => renderRecCard(p, { sent: true })).join("")}` : ""}
+  `;
 }
 
 function formatWhenLong(iso) {
@@ -546,8 +744,13 @@ function renderContactCard(c, isQueue = false) {
   const hold = state.shabbat.isShabbat && c.shabbat === "observant";
   const groupName = group?.name || "לא מסווג";
   return `<article class="card" data-contact="${esc(c.id)}">
-    <div class="hero-name">${esc(c.name)}</div>
-    <div class="hero-phone">${esc(C.formatPhoneDisplay(c.phone))}</div>
+    <div class="rec-head">
+      <div class="rec-head-text">
+        <div class="hero-name">${esc(c.name)}</div>
+        <div class="hero-phone">${esc(C.formatPhoneDisplay(c.phone))}</div>
+      </div>
+      ${sentToggle(c.id, !!c.sentAt, "toggle-sent", c.name)}
+    </div>
     <div class="meta-row">
       <span class="chip is-on chip--mute">${esc(groupName)}</span>
       ${c.sentAt ? `<span class="chip is-on chip--ok">נשלח ${esc(formatWhen(c.sentAt))}</span>` : ""}
@@ -594,11 +797,14 @@ function personRow(c) {
   let stClass = "";
   if (c.sentAt) { status = "נשלח"; stClass = "is-sent"; }
   else if (hold) { status = "מוצ״ש"; stClass = "is-hold"; }
-  return `<button type="button" class="person" data-act="open-contact" data-id="${esc(c.id)}">
-    <span class="avatar ${c.sentAt ? "is-sent" : ""}">${esc(initial)}</span>
-    <span class="person-body"><strong>${esc(c.name)}</strong><small>${esc(bits.join(" · "))}</small></span>
-    <span class="person-status ${stClass}">${esc(status)}</span>
-  </button>`;
+  return `<div class="person person-row">
+    <button type="button" class="person-main" data-act="open-contact" data-id="${esc(c.id)}">
+      <span class="avatar ${c.sentAt ? "is-sent" : ""}">${esc(initial)}</span>
+      <span class="person-body"><strong>${esc(c.name)}</strong><small>${esc(bits.join(" · "))}</small></span>
+      <span class="person-status ${stClass}">${esc(status)}</span>
+    </button>
+    ${sentToggle(c.id, !!c.sentAt, "toggle-sent", c.name)}
+  </div>`;
 }
 
 function filteredContacts() {
@@ -772,12 +978,12 @@ function renderTools(n) {
 function renderOnboarding() {
   return `<div class="onboard" role="dialog" aria-labelledby="ob-title">
     <div class="onboard-card">
-      <h2 id="ob-title">הודעה מהירה, וגם «הנה הם»</h2>
+      <h2 id="ob-title">מומלצים לשליחה, וגם «הנה הם»</h2>
       <p>הכלי הזה רץ רק אצלך בטלפון. אנשי הקשר לא יוצאים מכאן לשום מקום.</p>
       <ol>
-        <li>מייבאים את הרשימה מהטלפון (גם אלפי אנשי קשר).</li>
-        <li>בלשונית «הודעה» מחפשים שם, כותבים, ופותחים וואטסאפ בלחיצה.</li>
-        <li>אפשר גם לתזמן תזכורת — השליחה עצמה תמיד דורשת לחיצה שלך.</li>
+        <li>בלשונית «מומלצים» מחכים אנשים עם הודעה שכבר נוסחה. לוחצים, וואטסאפ נפתח איתם.</li>
+        <li>אפשר לסמן ✓ אם כבר שלחת לבד, בלי לפתוח וואטסאפ.</li>
+        <li>בלשונית «הודעה» אפשר גם לחפש שם ולכתוב כל הודעה. השליחה עצמה תמיד דורשת לחיצה שלך.</li>
       </ol>
       <button type="button" class="btn btn-primary" data-act="dismiss-onboard">הבנתי, בואו נתחיל</button>
     </div>
@@ -1079,6 +1285,52 @@ function sendContact(c, { force = false } = {}) {
   window.open(url, "_blank", "noopener");
 }
 
+function sendRec(p, { force = false } = {}) {
+  if (!p) return;
+  const view = enrichRec(p);
+  if (!force && C.recIsHeld(view, state.shabbat)) return;
+  if (!p.phone || !(p.message || "").trim()) return;
+  const url = C.waMeUrl(p.phone, p.message);
+  p.sentAt = new Date().toISOString();
+  p.sent = true;
+  state.lastSentRecId = p.id;
+  saveRecs();
+  showToast(`סומן כנשלח אל ${C.firstNameOf(p.name) || p.name}`, { act: "toggle-rec-sent", id: p.id, label: "בטל" });
+  window.open(url, "_blank", "noopener");
+}
+
+function toggleContactSent(c) {
+  if (!c) return;
+  if (c.sentAt) {
+    c.sentAt = null;
+    c.updatedAt = new Date().toISOString();
+    saveContacts();
+    showToast("בוטל סימון הנשלח");
+    return;
+  }
+  c.sentAt = new Date().toISOString();
+  c.updatedAt = c.sentAt;
+  state.lastSentId = c.id;
+  saveContacts();
+  showToast(`סומן כנשלח אל ${C.firstNameOf(c.name) || c.name}`, { act: "toggle-sent", id: c.id, label: "בטל" });
+}
+
+function toggleRecSent(p) {
+  if (!p) return;
+  if (C.recIsSent(p)) {
+    p.sentAt = null;
+    p.sent = false;
+    saveRecs();
+    showToast("בוטל סימון הנשלח");
+    return;
+  }
+  p.sentAt = new Date().toISOString();
+  p.sent = true;
+  state.lastSentRecId = p.id;
+  saveRecs();
+  showToast(`סומן כנשלח אל ${C.firstNameOf(p.name) || p.name}`, { act: "toggle-rec-sent", id: p.id, label: "בטל" });
+}
+
 function downloadJson(filename, obj) {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -1103,6 +1355,7 @@ function importRawContacts(raw, kind) {
   state.sheet = { type: "import-report" };
   if (added.length) state.ui.tab = "quick";
   rebuildIndex();
+  autoFillRecPhones();
   render();
 }
 
@@ -1118,8 +1371,32 @@ async function importFile(file) {
   importRawContacts(parsed.contacts, parsed.kind);
 }
 
+
+function importRecsData(data, { fromHash = false } = {}) {
+  const incoming = C.normalizeRecs(data).people;
+  if (!incoming.length) {
+    showToast("לא מצאתי אנשים בקובץ המומלצים");
+    return false;
+  }
+  state.recs = C.mergeRecs(state.recs, incoming);
+  autoFillRecPhones();
+  saveRecs();
+  state.ui.tab = "recs";
+  saveUi();
+  showToast(`נטענו ${incoming.length} מומלצים. הכל נשמר רק במכשיר הזה.`);
+  state.sheet = null;
+  render();
+  return true;
+}
+
 function importJson(data) {
   const type = data?.type;
+  if (type === C.RECS_TYPE || (Array.isArray(data?.people) && (type === C.RECS_TYPE || data?.version))) {
+    if (type === C.RECS_TYPE || (data.people && !data.contacts && !data.config && !data.groups)) {
+      importRecsData(data);
+      return;
+    }
+  }
   if (type === C.BACKUP_TYPE || (data.contacts && data.config)) {
     if (Array.isArray(data.contacts)) {
       const incoming = data.contacts.map(C.sanitizeContact).filter(Boolean);
@@ -1158,6 +1435,7 @@ function importJson(data) {
       saveRecents();
     }
     rebuildIndex();
+    autoFillRecPhones();
     state.sheet = { type: "import-report" };
     render();
     return;
@@ -1178,6 +1456,7 @@ function importJson(data) {
     state.contacts.push(...fresh);
     saveContacts();
     rebuildIndex();
+    autoFillRecPhones();
     state.importReport = { added: fresh, skipped: Array(skippedN).fill(0), invalid: 0, kind: "json" };
     state.sheet = { type: "import-report" };
     render();
@@ -1263,14 +1542,18 @@ function handleAct(act, el, ev) {
     if (c) sendContact(c, { force: el.dataset.force === "1" });
     return;
   }
-  if (act === "mark-sent") {
+  if (act === "mark-sent" || act === "toggle-sent") {
     const c = findContact(id);
     if (!c) return;
-    c.sentAt = new Date().toISOString();
-    c.updatedAt = c.sentAt;
-    state.lastSentId = c.id;
-    saveContacts();
-    showToast(`סומן כנשלח אל ${C.firstNameOf(c.name) || c.name}`, { act: "undo-sent", id: c.id, label: "בטל" });
+    if (act === "mark-sent" && c.sentAt) return;
+    if (act === "toggle-sent") toggleContactSent(c);
+    else {
+      c.sentAt = new Date().toISOString();
+      c.updatedAt = c.sentAt;
+      state.lastSentId = c.id;
+      saveContacts();
+      showToast(`סומן כנשלח אל ${C.firstNameOf(c.name) || c.name}`, { act: "toggle-sent", id: c.id, label: "בטל" });
+    }
     return;
   }
   if (act === "undo-sent") {
@@ -1281,6 +1564,32 @@ function handleAct(act, el, ev) {
     saveContacts();
     state.toast = null;
     showToast("השליחה בוטלה");
+    return;
+  }
+  if (act === "send-rec") {
+    sendRec(findRec(id), { force: el.dataset.force === "1" });
+    return;
+  }
+  if (act === "toggle-rec-sent") {
+    toggleRecSent(findRec(id));
+    return;
+  }
+  if (act === "pick-rec-phone") {
+    const rec = findRec(id);
+    if (!rec) return;
+    const phone = C.normalizePhone(el.dataset.phone || "");
+    if (!phone) {
+      showToast("לא זיהיתי מספר");
+      return;
+    }
+    rec.phone = phone;
+    state.recSearch[id] = "";
+    saveRecs();
+    render();
+    return;
+  }
+  if (act === "pick-recs") {
+    document.getElementById("json-import")?.click();
     return;
   }
   if (act === "skip") {
@@ -1740,6 +2049,18 @@ function handleActMore(act, el, id, val) {
 function handleField(field, el) {
   const id = el.dataset.id || "";
   const value = el.value;
+  if (field === "rec-message") {
+    const rec = findRec(id);
+    if (!rec) return;
+    rec.message = value;
+    saveRecs();
+    return;
+  }
+  if (field === "rec-phone-search") {
+    state.recSearch[id] = value;
+    paintRecSuggest(id);
+    return;
+  }
   if (field === "quick-search") {
     state.quick.query = value;
     state.quick.highlight = 0;
@@ -1899,13 +2220,17 @@ function bind() {
   }, { passive: true });
 }
 
-load();
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => { bind(); render(); startDueWatch(); });
-} else {
+async function boot() {
+  load();
   bind();
+  try { await consumeRecsHash(); } catch (err) { console.warn(err); }
   render();
   startDueWatch();
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => { boot(); });
+} else {
+  boot();
 }
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") checkDue({ notify: true });

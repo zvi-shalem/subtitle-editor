@@ -29,6 +29,17 @@ import {
   scheduledUpcoming,
   buildIcs,
   pushRecent,
+  sanitizeRec,
+  normalizeRecs,
+  mergeRecs,
+  sortRecs,
+  partitionRecs,
+  recIsSent,
+  recIsHeld,
+  encodeRecsFragment,
+  decodeRecsFragment,
+  recsHashPayload,
+  RECS_TYPE,
 } from "./core.js";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -289,6 +300,77 @@ check("scheduled due + ics contains wa.me and honest text", () => {
   assert.equal(rec2.length, 1);
 });
 
+
+check("recs: sent boolean is honored", () => {
+  const a = sanitizeRec({ id: "1", name: "יוסי", sent: true });
+  assert.equal(a.sent, true);
+  assert.ok(a.sentAt);
+  assert.equal(recIsSent(a), true);
+  const b = sanitizeRec({ id: "2", name: "דנה", sentAt: "2026-11-14T07:00:00.000Z" });
+  assert.equal(b.sent, true);
+  const c = sanitizeRec({ id: "3", name: "מיכל", sent: false, sentAt: "2026-11-14T07:00:00.000Z" });
+  assert.equal(c.sent, false);
+  assert.equal(c.sentAt, null);
+  const d = sanitizeRec({ id: "4", name: "רן" });
+  assert.equal(d.sent, false);
+  assert.equal(d.sentAt, null);
+});
+
+check("recs: sort, partition, shabbat hold", () => {
+  const people = normalizeRecs({
+    type: RECS_TYPE,
+    version: 1,
+    people: [
+      { id: "low", name: "נמוך", priority: 10 },
+      { id: "high", name: "גבוה", priority: 90 },
+      { id: "sent", name: "נשלח", priority: 100, sent: true },
+      { id: "shab", name: "שבת", priority: 80, shabbat: "observant" },
+    ],
+  }).people;
+  const shabbat = { isShabbat: true };
+  const parts = partitionRecs(people, shabbat);
+  assert.deepEqual(parts.ready.map((p) => p.id), ["high", "low"]);
+  assert.deepEqual(parts.held.map((p) => p.id), ["shab"]);
+  assert.equal(parts.sent.length, 1);
+  assert.equal(recIsHeld(parts.held[0], shabbat), true);
+  const open = partitionRecs(people, { isShabbat: false });
+  assert.ok(open.ready.some((p) => p.id === "shab"));
+  assert.equal(open.held.length, 0);
+});
+
+check("recs: merge keeps local sent and phone", () => {
+  const existing = [sanitizeRec({ id: "1", name: "יוסי", phone: "050-111-2222", sent: true, message: "היי" })];
+  const incoming = [sanitizeRec({ id: "1", name: "יוסי כהן", message: "שלום", phone: "" })];
+  const merged = mergeRecs(existing, incoming);
+  assert.equal(merged[0].name, "יוסי כהן");
+  assert.equal(merged[0].phone, "972501112222");
+  assert.equal(merged[0].sent, true);
+  assert.ok(merged[0].sentAt);
+  assert.equal(merged[0].message, "שלום");
+});
+
+try {
+  const data = {
+    type: RECS_TYPE,
+    version: 1,
+    people: [
+      { id: "1", name: "יוסי", phone: "050-123-4567", message: "היי\nקישור", priority: 10, sent: false },
+    ],
+  };
+  const gz = await encodeRecsFragment(data, { gzip: true });
+  const plain = await encodeRecsFragment(data, { gzip: false });
+  assert.equal(recsHashPayload("#recs=" + gz), gz);
+  const fromGz = await decodeRecsFragment("#recs=" + gz);
+  const fromPlain = await decodeRecsFragment(plain);
+  assert.equal(fromGz.people[0].name, "יוסי");
+  assert.equal(fromGz.people[0].phone, "972501234567");
+  assert.equal(fromPlain.people[0].message.includes("היי"), true);
+  assert.equal(fromGz.type, RECS_TYPE);
+  console.log("ok ", "recs: fragment gzip and plain roundtrip");
+} catch (err) {
+  failed++;
+  console.error("FAIL", "recs: fragment gzip and plain roundtrip", err.message);
+}
 
 if (failed) {
   console.error(`\n${failed} failed`);

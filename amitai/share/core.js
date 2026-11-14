@@ -12,6 +12,7 @@ export const STORAGE = {
   ui: "amitai-share.ui.v1",
   scheduled: "amitai-share.scheduled.v1",
   recents: "amitai-share.recents.v1",
+  recs: "amitai-share.recs.v1",
 };
 
 export const CONFIG_TYPE = "amitai-share-config";
@@ -1388,4 +1389,211 @@ export function sanitizeQuickTemplate(t) {
     name: String(t.name || "תבנית").trim() || "תבנית",
     text: t.text,
   };
+}
+
+/* ----------------------------- recommendations ----------------------------- */
+
+export const RECS_TYPE = "amitai-recs";
+
+export const LEVEL_LABELS = {
+  "א": "משפחה",
+  "ב": "הכי קרובים",
+  "ג": "חברים טובים",
+  "ד": "חברים",
+  "ה": "מכרים",
+  "ו": "מכבדים",
+};
+
+export function recIsSent(person) {
+  return !!(person && (person.sentAt || person.sent === true));
+}
+
+export function sanitizeRec(item) {
+  if (!item || typeof item !== "object") return null;
+  const name = String(item.name || "").trim();
+  if (!name) return null;
+  const phone = normalizePhone(item.phone) || "";
+  const shabbat = ["observant", "not", "unknown"].includes(item.shabbat) ? item.shabbat : "unknown";
+  const gender = ["male", "female", "unknown"].includes(item.gender) ? item.gender : "unknown";
+  const priority = Number.isFinite(Number(item.priority)) ? Number(item.priority) : 0;
+  const parsedAt = item.sentAt && Number.isFinite(Date.parse(item.sentAt)) ? item.sentAt : null;
+  const explicitSent = item.sent === true || item.sent === "true" || item.sent === 1;
+  const explicitUnsent = item.sent === false || item.sent === "false" || item.sent === 0;
+  let sentAt = parsedAt;
+  if (explicitUnsent) sentAt = null;
+  else if (explicitSent && !sentAt) sentAt = new Date().toISOString();
+  return {
+    id: typeof item.id === "string" && item.id ? item.id : uid("rec"),
+    name,
+    phone,
+    priority,
+    level: String(item.level || "").trim(),
+    circle: String(item.circle || "").trim(),
+    notes: String(item.notes || "").trim(),
+    message: String(item.message ?? ""),
+    gender,
+    shabbat,
+    sent: !!sentAt,
+    sentAt,
+  };
+}
+
+export function extractRecsPayload(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) return input;
+  if (Array.isArray(input.people)) return input.people;
+  return [];
+}
+
+export function normalizeRecs(input) {
+  const people = extractRecsPayload(input).map(sanitizeRec).filter(Boolean);
+  return { type: RECS_TYPE, version: 1, people };
+}
+
+export function mergeRecs(existing, incoming) {
+  const byId = new Map((existing || []).map((p) => [p.id, p]));
+  return (incoming || []).map((raw) => {
+    const p = sanitizeRec(raw);
+    if (!p) return null;
+    const old = byId.get(p.id);
+    if (!old) return p;
+    return {
+      ...p,
+      phone: p.phone || old.phone || "",
+      message: p.message || old.message || "",
+      sentAt: old.sentAt || p.sentAt || null,
+      sent: !!(old.sentAt || p.sentAt),
+      shabbat: p.shabbat !== "unknown" ? p.shabbat : (old.shabbat || "unknown"),
+      gender: p.gender !== "unknown" ? p.gender : (old.gender || "unknown"),
+    };
+  }).filter(Boolean);
+}
+
+export function recIsHeld(person, shabbat) {
+  return !!(shabbat?.isShabbat && person?.shabbat === "observant" && !recIsSent(person));
+}
+
+export function sortRecs(people, shabbat) {
+  return [...(people || [])].sort((a, b) => {
+    const aSent = recIsSent(a);
+    const bSent = recIsSent(b);
+    if (aSent !== bSent) return aSent ? 1 : -1;
+    const aHold = recIsHeld(a, shabbat);
+    const bHold = recIsHeld(b, shabbat);
+    if (aHold !== bHold) return aHold ? 1 : -1;
+    if ((b.priority || 0) !== (a.priority || 0)) return (b.priority || 0) - (a.priority || 0);
+    return (a.name || "").localeCompare(b.name || "", "he");
+  });
+}
+
+export function partitionRecs(people, shabbat) {
+  const ready = [];
+  const held = [];
+  const sent = [];
+  for (const p of sortRecs(people, shabbat)) {
+    if (recIsSent(p)) sent.push(p);
+    else if (recIsHeld(p, shabbat)) held.push(p);
+    else ready.push(p);
+  }
+  return { ready, held, sent };
+}
+
+export function recReasonTags(person) {
+  const tags = [];
+  if (person?.circle) tags.push(person.circle);
+  const level = LEVEL_LABELS[person?.level] || person?.level;
+  if (level) tags.push(level);
+  return tags;
+}
+
+export function resolveRecPhone(person, index) {
+  if (person?.phone) return person.phone;
+  if (!person?.name || !index?.length) return "";
+  const hits = searchContacts(index, person.name, 6);
+  const strong = hits.filter((h) => h.score >= 170 && h.phone);
+  if (strong.length === 1) return strong[0].phone;
+  return "";
+}
+
+export function bytesToBase64url(bytes) {
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let b64;
+  if (typeof Buffer !== "undefined") {
+    b64 = Buffer.from(arr).toString("base64");
+  } else {
+    let bin = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < arr.length; i += chunk) {
+      bin += String.fromCharCode(...arr.subarray(i, i + chunk));
+    }
+    b64 = btoa(bin);
+  }
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+export function base64urlToBytes(s) {
+  const str = String(s || "").replace(/[^A-Za-z0-9_-]/g, "");
+  if (!str) return new Uint8Array();
+  const pad = str.length % 4 === 0 ? "" : "=".repeat(4 - (str.length % 4));
+  const b64 = str.replace(/-/g, "+").replace(/_/g, "/") + pad;
+  if (typeof Buffer !== "undefined") return new Uint8Array(Buffer.from(b64, "base64"));
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function gzipBytes(bytes) {
+  if (typeof CompressionStream === "function") {
+    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  const { gzipSync } = await import("node:zlib");
+  return new Uint8Array(gzipSync(bytes));
+}
+
+async function gunzipBytes(bytes) {
+  if (typeof DecompressionStream === "function") {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  const { gunzipSync } = await import("node:zlib");
+  return new Uint8Array(gunzipSync(bytes));
+}
+
+export function recsHashPayload(hash) {
+  const raw = String(hash || "");
+  const trimmed = raw.startsWith("#") ? raw.slice(1) : raw;
+  if (!trimmed) return "";
+  const parts = trimmed.split("&");
+  for (const part of parts) {
+    const i = part.indexOf("=");
+    const key = i < 0 ? part : part.slice(0, i);
+    if (key === "recs") return decodeURIComponent((i < 0 ? "" : part.slice(i + 1)).replace(/\+/g, "%20"));
+  }
+  return "";
+}
+
+export async function encodeRecsFragment(data, { gzip = true } = {}) {
+  const payload = normalizeRecs(data);
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const out = gzip ? await gzipBytes(bytes) : bytes;
+  return bytesToBase64url(out);
+}
+
+export async function decodeRecsFragment(hashOrPayload) {
+  const raw = recsHashPayload(hashOrPayload) || String(hashOrPayload || "").replace(/^#/, "");
+  if (!raw) return null;
+  const bytes = base64urlToBytes(raw);
+  if (!bytes.length) return null;
+  let textBytes = bytes;
+  if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
+    textBytes = await gunzipBytes(bytes);
+  }
+  const text = new TextDecoder().decode(textBytes);
+  const data = JSON.parse(text);
+  if (data && typeof data === "object" && data.type && data.type !== RECS_TYPE) {
+    throw new Error("unexpected recs type");
+  }
+  return normalizeRecs(data);
 }
