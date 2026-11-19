@@ -551,12 +551,51 @@ button { font: inherit; color: inherit; background: none; border: 0; }
     });
   }
 
+  /* פתיחה ישירה באפליקציית יוטיוב כשהיא מותקנת, אחרת בדפדפן */
+  const UA = navigator.userAgent || '';
+  const IS_ANDROID = /Android/i.test(UA);
+  const IS_IOS = /iPhone|iPad|iPod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function ytPath(url) {
+    const id = youtubeId(url);
+    if (id) return 'www.youtube.com/watch?v=' + id;
+    return String(url).replace(/^https?:\/\//, '');
+  }
+  function openYoutube(url) {
+    const web = 'https://' + ytPath(url);
+    if (IS_ANDROID) {
+      location.href = 'intent://' + ytPath(url) +
+        '#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=' +
+        encodeURIComponent(web) + ';end';
+      return true;
+    }
+    if (IS_IOS) {
+      let left = false;
+      const onHide = () => { if (document.hidden) left = true; };
+      document.addEventListener('visibilitychange', onHide);
+      window.addEventListener('pagehide', () => { left = true; }, { once: true });
+      setTimeout(() => {
+        document.removeEventListener('visibilitychange', onHide);
+        if (!left && !document.hidden) location.href = web;
+      }, 1400);
+      location.href = 'youtube://' + ytPath(url);
+      return true;
+    }
+    return false;
+  }
+
   list.addEventListener('click', ev => {
     const a = ev.target.closest('a.card');
     if (!a) return;
     if (a.classList.contains('is-soon') || a.getAttribute('href') === '#') {
       ev.preventDefault();
       toast('הסרטון יעלה בקרוב ביוטיוב');
+      return;
+    }
+    if (openYoutube(a.getAttribute('href'))) ev.preventDefault();
+  });
+  channel.addEventListener('click', ev => {
+    if (isYoutube(CHANNEL_URL) || /youtube\.com\//.test(CHANNEL_URL)) {
+      if (openYoutube(CHANNEL_URL)) ev.preventDefault();
     }
   });
   </script>
